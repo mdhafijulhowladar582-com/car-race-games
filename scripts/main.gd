@@ -1,9 +1,18 @@
 extends Node3D
 
+var health_bar: ProgressBar
+var health_label: Label
+
 func _ready() -> void:
     _build_environment()
     _build_road()
     _build_mobile_controls()
+    _build_health_hud()
+
+    var car := get_node_or_null("PlayerCar")
+    if car:
+        car.health_changed.connect(_on_health_changed)
+        _on_health_changed(car.health, car.max_health)
 
 func _build_environment() -> void:
     var world := WorldEnvironment.new()
@@ -41,6 +50,48 @@ func _build_road() -> void:
     shape.size = Vector3(12.0, 0.2, 80.0)
     collision.shape = shape
     road_body.add_child(collision)
+
+func _build_health_hud() -> void:
+    var canvas := CanvasLayer.new()
+    canvas.name = "GameHUD"
+    add_child(canvas)
+
+    var panel := Panel.new()
+    panel.position = Vector2(28.0, 28.0)
+    panel.size = Vector2(330.0, 82.0)
+
+    var panel_style := StyleBoxFlat.new()
+    panel_style.bg_color = Color(0.02, 0.02, 0.03, 0.78)
+    panel_style.corner_radius_top_left = 14
+    panel_style.corner_radius_top_right = 14
+    panel_style.corner_radius_bottom_left = 14
+    panel_style.corner_radius_bottom_right = 14
+    panel.add_theme_stylebox_override("panel", panel_style)
+    canvas.add_child(panel)
+
+    health_label = Label.new()
+    health_label.position = Vector2(18.0, 10.0)
+    health_label.size = Vector2(290.0, 28.0)
+    health_label.text = "HP 100 / 100"
+    health_label.add_theme_font_size_override("font_size", 22)
+    panel.add_child(health_label)
+
+    health_bar = ProgressBar.new()
+    health_bar.position = Vector2(18.0, 46.0)
+    health_bar.size = Vector2(294.0, 22.0)
+    health_bar.min_value = 0.0
+    health_bar.max_value = 100.0
+    health_bar.value = 100.0
+    health_bar.show_percentage = false
+    panel.add_child(health_bar)
+
+func _on_health_changed(current_health: float, maximum_health: float) -> void:
+    if not is_instance_valid(health_bar):
+        return
+
+    health_bar.max_value = maximum_health
+    health_bar.value = current_health
+    health_label.text = "HP %d / %d" % [roundi(current_health), roundi(maximum_health)]
 
 func _build_mobile_controls() -> void:
     var canvas := CanvasLayer.new()
