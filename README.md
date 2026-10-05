@@ -1,25 +1,42 @@
 # Car Race Games
 
-A 3D car racing game built with Godot 4.x.
+Godot 4.x 3D car racing game for Android and PC.
 
-## Current foundation
+## Current Progress
 
-- Godot 4 project
-- 3D main scene
-- Basic road
-- Procedural starter car
-- Third-person camera
-- Android-friendly compatibility renderer
+1. 3D Car + Car Physics — DONE
+2. Smooth Steering + Acceleration + Braking — DONE
+3. Mobile Touch Controls — TODO
+4. Health + Damage — TODO
+5. Game Over — TODO
+6. Audio — TODO
+7. Better 3D Car — TODO
+8. Bends, Ramps + Obstacles — TODO
+9. Race + Finish System — TODO
+10. Android Optimization + APK Export — TODO
 
-## Planned development
+## Current Controls
 
-1. Car physics
-2. Smooth steering, acceleration and braking
-3. Mobile touch controls
-4. Health and damage
-5. Game over
-6. Audio
-7. Better 3D car
-8. Curves, ramps and obstacles
-9. Race and finish system
-10. Android optimization and export
+- W / Up Arrow: accelerate
+- S / Down Arrow: brake and reverse
+- A / Left Arrow: steer left
+- D / Right Arrow: steer right
+
+## Car Control Features
+
+- Smooth acceleration
+- Smooth braking
+- Reverse speed
+- Rolling resistance
+- Smooth steering response
+- Adjustable steering sensitivity
+- Speed-based steering stability
+- Ground stick and gravity
+- CharacterBody3D collision-based movement
+
+## Project Structure
+
+- `project.godot` — Godot project settings and input actions
+- `scenes/main.tscn` — Main 3D scene
+- `scripts/main.gd` — Environment and physical road
+- `scripts/player_car.gd` — Player car physics and controls
