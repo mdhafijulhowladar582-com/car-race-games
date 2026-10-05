@@ -11,9 +11,20 @@ Godot 4.x 3D car racing game for Android and PC.
 5. Game Over — DONE
 6. Audio — DONE
 7. Better 3D Car — DONE
-8. Bends, Ramps + Obstacles — TODO
+8. Bends, Ramps + Obstacles — DONE
 9. Race + Finish System — TODO
 10. Android Optimization + APK Export — TODO
+
+## Track
+
+- Multiple connected 3D road segments
+- Curved road sections
+- Raised road sections
+- Driveable ramps
+- Ramp warning stripes
+- Collision barriers
+- Barrel obstacles
+- Physical collision on road and obstacles
 
 ## Car Visual
 
@@ -50,10 +61,12 @@ Godot 4.x 3D car racing game for Android and PC.
 - Game Over and restart
 - Procedural audio
 - Detailed procedural car visuals
+- Curved/raised track
+- Ramps and obstacles
 
 ## Project Structure
 
 - `project.godot` — Godot project settings and input actions
 - `scenes/main.tscn` — Main 3D scene
-- `scripts/main.gd` — Environment, road, controls, HUD and game-over UI
+- `scripts/main.gd` — Environment, track, obstacles, controls, HUD and game-over UI
 - `scripts/player_car.gd` — Car physics, controls, health, game-over, audio and visual model
