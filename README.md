@@ -12,8 +12,18 @@ Godot 4.x 3D car racing game for Android and PC.
 6. Audio — DONE
 7. Better 3D Car — DONE
 8. Bends, Ramps + Obstacles — DONE
-9. Race + Finish System — TODO
+9. Race + Finish System — DONE
 10. Android Optimization + APK Export — TODO
+
+## Race System
+
+- Race progress percentage HUD
+- Remaining distance to finish
+- Physical finish-line trigger
+- Checkered finish-line visuals
+- Finish banner and arch
+- Race Finished overlay
+- Race Again restart button
 
 ## Track
 
