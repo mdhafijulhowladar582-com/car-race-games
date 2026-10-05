@@ -152,6 +152,9 @@ func _create_tone(frequency: float, duration: float) -> AudioStreamWAV:
     stream.format = AudioStreamWAV.FORMAT_16_BITS
     stream.mix_rate = sample_rate
     stream.stereo = false
+    stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+    stream.loop_begin = 0
+    stream.loop_end = samples
     stream.data = data
     return stream
 
