@@ -13,7 +13,24 @@ Godot 4.x 3D car racing game for Android and PC.
 7. Better 3D Car — DONE
 8. Bends, Ramps + Obstacles — DONE
 9. Race + Finish System — DONE
-10. Android Optimization + APK Export — TODO
+10. Android Optimization + APK Export — DONE
+
+## Android Optimization
+
+- Godot Compatibility renderer for Android-friendly performance
+- Mobile renderer explicitly uses Compatibility mode
+- Lightweight procedural assets with no external 3D dependencies
+- Procedural audio avoids external audio files
+- Duplicate road-building code removed
+- Physics uses GodotPhysics for predictable mobile compatibility
+- Engine audio uses a looped procedural stream instead of repeatedly creating audio
+- UI uses the existing 1280x720 canvas stretch setup
+
+## APK Export
+
+- Project is configured as an Android-ready Godot project
+- Android APK/AAB export still requires a Godot installation with Android export templates and the Android SDK/JDK
+- Release builds additionally require Android signing configuration
 
 ## Race System
 
