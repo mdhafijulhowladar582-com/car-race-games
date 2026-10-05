@@ -10,10 +10,23 @@ Godot 4.x 3D car racing game for Android and PC.
 4. Health + Damage — DONE
 5. Game Over — DONE
 6. Audio — DONE
-7. Better 3D Car — TODO
+7. Better 3D Car — DONE
 8. Bends, Ramps + Obstacles — TODO
 9. Race + Finish System — TODO
 10. Android Optimization + APK Export — TODO
+
+## Car Visual
+
+- Detailed procedural sports-car body
+- Hood and raised cabin
+- Dark windshield and rear window
+- Front and rear bumpers
+- Emissive headlights
+- Emissive taillights
+- Rear spoiler
+- Four detailed wheels
+- Metallic/roughness materials
+- No external 3D model asset required for the current prototype
 
 ## Controls
 
@@ -29,30 +42,18 @@ Godot 4.x 3D car racing game for Android and PC.
 - BRAKE: brake and reverse
 - GO: accelerate
 
-## Audio System
+## Systems Completed
 
-- Procedural engine audio
-- Engine pitch increases with speed
-- Engine volume responds to speed
-- Brake audio while braking
-- Collision/crash audio
-- Game Over audio
-- 3D positional audio players
-- No external audio files required for the current prototype
-
-## Health and Game Over
-
-- 100 HP by default
-- Collision-based damage
-- Impact-speed-based damage amount
-- Damage cooldown
-- Live HP HUD and health bar
-- At 0 HP the car enters a game-over state
-- Restart button reloads the current scene
+- Car physics and controls
+- Mobile touch controls
+- Health and collision damage
+- Game Over and restart
+- Procedural audio
+- Detailed procedural car visuals
 
 ## Project Structure
 
 - `project.godot` — Godot project settings and input actions
 - `scenes/main.tscn` — Main 3D scene
 - `scripts/main.gd` — Environment, road, controls, HUD and game-over UI
-- `scripts/player_car.gd` — Car physics, controls, health, game-over and audio
+- `scripts/player_car.gd` — Car physics, controls, health, game-over, audio and visual model
