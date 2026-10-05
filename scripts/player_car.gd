@@ -1,11 +1,21 @@
 extends CharacterBody3D
 
+@export_category("Speed")
 @export var max_speed := 28.0
+@export var reverse_speed := 10.0
 @export var acceleration := 18.0
-@export var braking := 28.0
-@export var steering_speed := 2.2
-@export var max_steering_angle := 28.0
+@export var braking := 30.0
+@export var rolling_resistance := 7.0
+
+@export_category("Steering")
+@export_range(0.1, 5.0, 0.1) var steering_sensitivity := 2.4
+@export var steering_response := 7.0
+@export var max_steering_angle := 30.0
+@export var steering_at_speed := 0.65
+
+@export_category("Stability")
 @export var gravity := 22.0
+@export var ground_stick := 0.2
 
 var speed := 0.0
 var steering := 0.0
@@ -17,24 +27,41 @@ func _physics_process(delta: float) -> void:
     var throttle := Input.get_axis("brake", "accelerate")
     var steer_input := Input.get_axis("steer_left", "steer_right")
 
+    _update_speed(throttle, delta)
+    _update_steering(steer_input, delta)
+    _move_car(delta)
+
+func _update_speed(throttle: float, delta: float) -> void:
     if throttle > 0.0:
-        speed = move_toward(speed, max_speed, acceleration * delta)
+        speed = move_toward(speed, max_speed, acceleration * throttle * delta)
     elif throttle < 0.0:
-        speed = move_toward(speed, 0.0, braking * delta)
+        if speed > 0.5:
+            speed = move_toward(speed, 0.0, braking * -throttle * delta)
+        else:
+            speed = move_toward(speed, -reverse_speed, acceleration * 0.55 * -throttle * delta)
     else:
-        speed = move_toward(speed, 0.0, acceleration * 0.35 * delta)
+        speed = move_toward(speed, 0.0, rolling_resistance * delta)
 
-    steering = move_toward(steering, steer_input, steering_speed * delta)
+func _update_steering(steer_input: float, delta: float) -> void:
+    var target_steering := steer_input * steering_sensitivity
+    steering = move_toward(steering, target_steering, steering_response * delta)
 
-    var turn_strength := steering * clamp(speed / max_speed, 0.0, 1.0)
-    rotation.y -= turn_strength * max_steering_angle * delta
+func _move_car(delta: float) -> void:
+    var speed_ratio := clamp(abs(speed) / max_speed, 0.0, 1.0)
+    var turn_strength := steering * lerp(1.0, steering_at_speed, speed_ratio)
 
-    velocity.x = sin(rotation.y) * speed
-    velocity.z = cos(rotation.y) * speed
+    if abs(speed) > 0.1:
+        var direction := 1.0 if speed >= 0.0 else -1.0
+        rotation.y -= direction * turn_strength * deg_to_rad(max_steering_angle) * delta
+
+    var forward := -global_transform.basis.z
+    velocity.x = forward.x * speed
+    velocity.z = forward.z * speed
+
     if not is_on_floor():
         velocity.y -= gravity * delta
     else:
-        velocity.y = -0.2
+        velocity.y = -ground_stick
 
     move_and_slide()
 
