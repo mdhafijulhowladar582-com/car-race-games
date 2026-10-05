@@ -7,7 +7,7 @@ Godot 4.x 3D car racing game for Android and PC.
 1. 3D Car + Car Physics — DONE
 2. Smooth Steering + Acceleration + Braking — DONE
 3. Mobile Touch Controls — DONE
-4. Health + Damage — TODO
+4. Health + Damage — DONE
 5. Game Over — TODO
 6. Audio — TODO
 7. Better 3D Car — TODO
@@ -29,31 +29,21 @@ Godot 4.x 3D car racing game for Android and PC.
 - BRAKE: brake and reverse
 - GO: accelerate
 
-Mobile buttons are created at runtime and feed the same input actions used by the car physics.
+## Health System
 
-## Car Control Features
-
-- Smooth acceleration
-- Smooth braking
-- Reverse speed
-- Rolling resistance
-- Smooth steering response
-- Adjustable steering sensitivity
-- Speed-based steering stability
-- Ground stick and gravity
-
-## Mobile Features
-
-- Four touch controls
-- Press-and-hold driving
-- Visual pressed state
-- Android-friendly canvas UI
-- Scalable viewport
-- No separate mobile physics code
+- 100 HP by default
+- Collision-based damage
+- Impact-speed-based damage amount
+- Damage cooldown to prevent rapid repeated damage
+- Health cannot go below 0
+- Repair function for future pickups
+- Real-time HP HUD
+- Health percentage helper
+- Game Over is intentionally handled in task #5
 
 ## Project Structure
 
 - `project.godot` — Godot project settings and input actions
 - `scenes/main.tscn` — Main 3D scene
-- `scripts/main.gd` — Environment, road and mobile controls
-- `scripts/player_car.gd` — Player car physics and controls
+- `scripts/main.gd` — Environment, road, mobile controls and HUD
+- `scripts/player_car.gd` — Player car physics, controls and health
