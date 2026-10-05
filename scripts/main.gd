@@ -3,7 +3,6 @@ extends Node3D
 func _ready() -> void:
     _create_environment()
     _create_track()
-    _create_car()
 
 func _create_environment() -> void:
     var world := WorldEnvironment.new()
@@ -22,33 +21,25 @@ func _create_environment() -> void:
     add_child(sun)
 
 func _create_track() -> void:
-    var road := MeshInstance3D.new()
+    var road := StaticBody3D.new()
+    road.name = "Road"
+
+    var mesh_instance := MeshInstance3D.new()
     var mesh := BoxMesh.new()
     mesh.size = Vector3(12.0, 0.2, 80.0)
-    road.mesh = mesh
-    road.position = Vector3(0.0, -0.1, -30.0)
+    mesh_instance.mesh = mesh
+    mesh_instance.position = Vector3(0.0, -0.1, -25.0)
+
     var material := StandardMaterial3D.new()
     material.albedo_color = Color(0.08, 0.08, 0.09)
-    road.material_override = material
+    mesh_instance.material_override = material
+    road.add_child(mesh_instance)
+
+    var collision := CollisionShape3D.new()
+    var shape := BoxShape3D.new()
+    shape.size = Vector3(12.0, 0.2, 80.0)
+    collision.shape = shape
+    collision.position = Vector3(0.0, -0.1, -25.0)
+    road.add_child(collision)
+
     add_child(road)
-
-func _create_car() -> void:
-    var car := Node3D.new()
-    car.name = "PlayerCar"
-    car.position = Vector3(0.0, 0.8, 15.0)
-    add_child(car)
-
-    var body := MeshInstance3D.new()
-    var body_mesh := BoxMesh.new()
-    body_mesh.size = Vector3(2.2, 0.7, 4.0)
-    body.mesh = body_mesh
-    var body_material := StandardMaterial3D.new()
-    body_material.albedo_color = Color(0.8, 0.08, 0.05)
-    body.material_override = body_material
-    car.add_child(body)
-
-    var camera := Camera3D.new()
-    camera.position = Vector3(0.0, 4.5, 8.0)
-    camera.rotation_degrees = Vector3(-15.0, 180.0, 0.0)
-    car.add_child(camera)
-    camera.current = true
