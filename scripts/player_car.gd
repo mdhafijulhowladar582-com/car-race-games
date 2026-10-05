@@ -13,17 +13,30 @@ extends CharacterBody3D
 @export var max_steering_angle := 30.0
 @export var steering_at_speed := 0.65
 
+@export_category("Health")
+@export var max_health := 100.0
+@export var collision_damage := 20.0
+@export var damage_cooldown := 0.5
+
 @export_category("Stability")
 @export var gravity := 22.0
 @export var ground_stick := 0.2
 
 var speed := 0.0
 var steering := 0.0
+var health := 100.0
+var damage_timer := 0.0
+
+signal health_changed(current_health: float, maximum_health: float)
 
 func _ready() -> void:
+    health = max_health
     _build_car()
+    health_changed.emit(health, max_health)
 
 func _physics_process(delta: float) -> void:
+    damage_timer = max(0.0, damage_timer - delta)
+
     var throttle := Input.get_axis("brake", "accelerate")
     var steer_input := Input.get_axis("steer_left", "steer_right")
 
@@ -64,6 +77,30 @@ func _move_car(delta: float) -> void:
         velocity.y = -ground_stick
 
     move_and_slide()
+
+    for i in get_slide_collision_count():
+        var collision := get_slide_collision(i)
+        var impact_speed := collision.get_travel().length() / max(delta, 0.001)
+        if impact_speed > 4.0:
+            var damage := clamp(impact_speed * 0.9, collision_damage * 0.5, collision_damage * 2.0)
+            take_damage(damage)
+
+func take_damage(amount: float) -> void:
+    if damage_timer > 0.0 or health <= 0.0:
+        return
+
+    health = clamp(health - amount, 0.0, max_health)
+    damage_timer = damage_cooldown
+    health_changed.emit(health, max_health)
+
+func repair(amount: float) -> void:
+    health = clamp(health + amount, 0.0, max_health)
+    health_changed.emit(health, max_health)
+
+func get_health_percent() -> float:
+    if max_health <= 0.0:
+        return 0.0
+    return health / max_health
 
 func _build_car() -> void:
     var collision := get_node("CollisionShape3D") as CollisionShape3D
