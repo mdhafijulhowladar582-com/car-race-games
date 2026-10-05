@@ -2,16 +2,22 @@ extends Node3D
 
 var health_bar: ProgressBar
 var health_label: Label
+var mobile_controls: CanvasLayer
+var game_over_overlay: ColorRect
+var game_over_title: Label
+var restart_button: Button
 
 func _ready() -> void:
     _build_environment()
     _build_road()
     _build_mobile_controls()
     _build_health_hud()
+    _build_game_over_ui()
 
     var car := get_node_or_null("PlayerCar")
     if car:
         car.health_changed.connect(_on_health_changed)
+        car.game_over.connect(_on_game_over)
         _on_health_changed(car.health, car.max_health)
 
 func _build_environment() -> void:
@@ -85,6 +91,59 @@ func _build_health_hud() -> void:
     health_bar.show_percentage = false
     panel.add_child(health_bar)
 
+func _build_game_over_ui() -> void:
+    var canvas := CanvasLayer.new()
+    canvas.name = "GameOverUI"
+    canvas.layer = 20
+    add_child(canvas)
+
+    game_over_overlay = ColorRect.new()
+    game_over_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    game_over_overlay.color = Color(0.0, 0.0, 0.0, 0.72)
+    game_over_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+    game_over_overlay.visible = false
+    canvas.add_child(game_over_overlay)
+
+    game_over_title = Label.new()
+    game_over_title.text = "GAME OVER"
+    game_over_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    game_over_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+    game_over_title.set_anchors_preset(Control.PRESET_CENTER)
+    game_over_title.position = Vector2(-300.0, -120.0)
+    game_over_title.size = Vector2(600.0, 100.0)
+    game_over_title.add_theme_font_size_override("font_size", 64)
+    game_over_overlay.add_child(game_over_title)
+
+    var message := Label.new()
+    message.text = "Your car has been destroyed"
+    message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    message.set_anchors_preset(Control.PRESET_CENTER)
+    message.position = Vector2(-300.0, -20.0)
+    message.size = Vector2(600.0, 50.0)
+    message.add_theme_font_size_override("font_size", 24)
+    game_over_overlay.add_child(message)
+
+    restart_button = Button.new()
+    restart_button.text = "RESTART"
+    restart_button.set_anchors_preset(Control.PRESET_CENTER)
+    restart_button.position = Vector2(-140.0, 55.0)
+    restart_button.size = Vector2(280.0, 80.0)
+    restart_button.focus_mode = Control.FOCUS_NONE
+    restart_button.add_theme_font_size_override("font_size", 28)
+    restart_button.pressed.connect(_restart_game)
+    game_over_overlay.add_child(restart_button)
+
+func _on_game_over() -> void:
+    if is_instance_valid(mobile_controls):
+        mobile_controls.visible = false
+    if is_instance_valid(game_over_overlay):
+        game_over_overlay.visible = true
+
+func _restart_game() -> void:
+    var car := get_node_or_null("PlayerCar")
+    if car and car.has_method("restart_game"):
+        car.restart_game()
+
 func _on_health_changed(current_health: float, maximum_health: float) -> void:
     if not is_instance_valid(health_bar):
         return
@@ -94,9 +153,9 @@ func _on_health_changed(current_health: float, maximum_health: float) -> void:
     health_label.text = "HP %d / %d" % [roundi(current_health), roundi(maximum_health)]
 
 func _build_mobile_controls() -> void:
-    var canvas := CanvasLayer.new()
-    canvas.name = "MobileControls"
-    add_child(canvas)
+    mobile_controls = CanvasLayer.new()
+    mobile_controls.name = "MobileControls"
+    add_child(mobile_controls)
 
     var title := Label.new()
     title.text = "TOUCH CONTROLS"
@@ -106,12 +165,12 @@ func _build_mobile_controls() -> void:
     title.set_anchors_preset(Control.PRESET_TOP_WIDE)
     title.position = Vector2(0.0, 18.0)
     title.size = Vector2(1280.0, 30.0)
-    canvas.add_child(title)
+    mobile_controls.add_child(title)
 
-    _add_touch_button(canvas, "LEFT", "steer_left", Vector2(35.0, 585.0), Vector2(130.0, 95.0))
-    _add_touch_button(canvas, "RIGHT", "steer_right", Vector2(180.0, 585.0), Vector2(130.0, 95.0))
-    _add_touch_button(canvas, "BRAKE", "brake", Vector2(965.0, 585.0), Vector2(130.0, 95.0))
-    _add_touch_button(canvas, "GO", "accelerate", Vector2(1110.0, 585.0), Vector2(130.0, 95.0))
+    _add_touch_button(mobile_controls, "LEFT", "steer_left", Vector2(35.0, 585.0), Vector2(130.0, 95.0))
+    _add_touch_button(mobile_controls, "RIGHT", "steer_right", Vector2(180.0, 585.0), Vector2(130.0, 95.0))
+    _add_touch_button(mobile_controls, "BRAKE", "brake", Vector2(965.0, 585.0), Vector2(130.0, 95.0))
+    _add_touch_button(mobile_controls, "GO", "accelerate", Vector2(1110.0, 585.0), Vector2(130.0, 95.0))
 
 func _add_touch_button(parent: CanvasLayer, label_text: String, action: String, button_position: Vector2, button_size: Vector2) -> void:
     var button := Button.new()
