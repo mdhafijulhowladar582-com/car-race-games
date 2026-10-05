@@ -57,6 +57,134 @@ func _build_road() -> void:
     collision.shape = shape
     road_body.add_child(collision)
 
+func _build_road() -> void:
+    var road_material := StandardMaterial3D.new()
+    road_material.albedo_color = Color(0.12, 0.12, 0.14)
+    road_material.roughness = 0.92
+
+    var segment_data := [
+        {"position": Vector3(0.0, -0.1, 10.0), "size": Vector3(12.0, 0.2, 20.0), "rotation": 0.0},
+        {"position": Vector3(0.0, -0.1, -8.0), "size": Vector3(12.0, 0.2, 18.0), "rotation": 0.0},
+        {"position": Vector3(4.0, 0.1, -25.0), "size": Vector3(12.0, 0.2, 18.0), "rotation": -8.0},
+        {"position": Vector3(9.0, 0.45, -42.0), "size": Vector3(12.0, 0.2, 18.0), "rotation": -18.0},
+        {"position": Vector3(10.0, 0.85, -59.0), "size": Vector3(12.0, 0.2, 18.0), "rotation": -2.0}
+    ]
+
+    for data in segment_data:
+        _add_road_segment(data.position, data.size, data.rotation, road_material)
+
+    _add_ramp(Vector3(-2.0, 0.0, -16.0), 0.0)
+    _add_ramp(Vector3(6.0, 0.25, -51.0), -18.0)
+
+    _add_barrier(Vector3(-4.0, 0.65, -5.0), 0.0)
+    _add_barrier(Vector3(4.0, 0.65, -29.0), 0.0)
+    _add_barrier(Vector3(11.0, 1.35, -45.0), -18.0)
+    _add_barrel(Vector3(1.8, 0.7, -35.0))
+    _add_barrel(Vector3(7.0, 1.0, -55.0))
+
+func _add_road_segment(position: Vector3, size: Vector3, rotation_y: float, material: StandardMaterial3D) -> void:
+    var road_body := StaticBody3D.new()
+    road_body.position = position
+    road_body.rotation_degrees.y = rotation_y
+    add_child(road_body)
+
+    var road_mesh := MeshInstance3D.new()
+    var road_box := BoxMesh.new()
+    road_box.size = size
+    road_mesh.mesh = road_box
+    road_mesh.material_override = material
+    road_body.add_child(road_mesh)
+
+    var collision := CollisionShape3D.new()
+    var shape := BoxShape3D.new()
+    shape.size = size
+    collision.shape = shape
+    road_body.add_child(collision)
+
+func _add_ramp(position: Vector3, rotation_y: float) -> void:
+    var ramp := StaticBody3D.new()
+    ramp.position = position
+    ramp.rotation_degrees.y = rotation_y
+    add_child(ramp)
+
+    var mesh_instance := MeshInstance3D.new()
+    var mesh := BoxMesh.new()
+    mesh.size = Vector3(5.0, 0.7, 6.0)
+    mesh_instance.mesh = mesh
+    mesh_instance.position = Vector3(0.0, 0.25, 0.0)
+    mesh_instance.rotation_degrees.x = -10.0
+    var material := StandardMaterial3D.new()
+    material.albedo_color = Color(0.2, 0.24, 0.3)
+    material.metallic = 0.25
+    mesh_instance.material_override = material
+    ramp.add_child(mesh_instance)
+
+    var collision := CollisionShape3D.new()
+    var shape := BoxShape3D.new()
+    shape.size = Vector3(5.0, 0.7, 6.0)
+    collision.shape = shape
+    collision.position = Vector3(0.0, 0.25, 0.0)
+    collision.rotation_degrees.x = -10.0
+    ramp.add_child(collision)
+
+    var stripe := MeshInstance3D.new()
+    var stripe_mesh := BoxMesh.new()
+    stripe_mesh.size = Vector3(4.2, 0.05, 0.7)
+    stripe.mesh = stripe_mesh
+    stripe.position = Vector3(0.0, 0.65, -1.2)
+    var stripe_material := StandardMaterial3D.new()
+    stripe_material.albedo_color = Color(1.0, 0.72, 0.05)
+    stripe_material.emission_enabled = true
+    stripe_material.emission = Color(0.8, 0.35, 0.02)
+    stripe.material_override = stripe_material
+    ramp.add_child(stripe)
+
+func _add_barrier(position: Vector3, rotation_y: float) -> void:
+    var obstacle := StaticBody3D.new()
+    obstacle.position = position
+    obstacle.rotation_degrees.y = rotation_y
+    add_child(obstacle)
+
+    var mesh_instance := MeshInstance3D.new()
+    var mesh := BoxMesh.new()
+    mesh.size = Vector3(3.0, 1.0, 0.55)
+    mesh_instance.mesh = mesh
+    mesh_instance.position.y = 0.5
+    var material := StandardMaterial3D.new()
+    material.albedo_color = Color(0.9, 0.12, 0.04)
+    mesh_instance.material_override = material
+    obstacle.add_child(mesh_instance)
+
+    var collision := CollisionShape3D.new()
+    var shape := BoxShape3D.new()
+    shape.size = Vector3(3.0, 1.0, 0.55)
+    collision.shape = shape
+    collision.position.y = 0.5
+    obstacle.add_child(collision)
+
+func _add_barrel(position: Vector3) -> void:
+    var obstacle := StaticBody3D.new()
+    obstacle.position = position
+    add_child(obstacle)
+
+    var mesh_instance := MeshInstance3D.new()
+    var mesh := CylinderMesh.new()
+    mesh.top_radius = 0.45
+    mesh.bottom_radius = 0.45
+    mesh.height = 1.1
+    mesh_instance.mesh = mesh
+    var material := StandardMaterial3D.new()
+    material.albedo_color = Color(0.95, 0.45, 0.03)
+    mesh_instance.material_override = material
+    obstacle.add_child(mesh_instance)
+
+    var collision := CollisionShape3D.new()
+    var shape := CylinderShape3D.new()
+    shape.radius = 0.45
+    shape.height = 1.1
+    collision.shape = shape
+    obstacle.add_child(collision)
+
 func _build_health_hud() -> void:
     var canvas := CanvasLayer.new()
     canvas.name = "GameHUD"
