@@ -39,4 +39,10 @@ steer_right={
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
 environment/defaults/default_clear_color=Color(0.08, 0.1, 0.14, 1)
+
+[performance]
+
+3d/physics/3d_physics_engine="GodotPhysics"
+
