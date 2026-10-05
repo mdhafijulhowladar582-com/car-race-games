@@ -6,12 +6,21 @@ var mobile_controls: CanvasLayer
 var game_over_overlay: ColorRect
 var game_over_title: Label
 var restart_button: Button
+var race_label: Label
+var race_bar: ProgressBar
+var finish_overlay: ColorRect
+var finish_button: Button
+var race_finished := false
+var race_start_z := 15.0
+var finish_z := -66.0
+
 
 func _ready() -> void:
     _build_environment()
     _build_road()
     _build_mobile_controls()
     _build_health_hud()
+    _build_race_system()
     _build_game_over_ui()
 
     var car := get_node_or_null("PlayerCar")
@@ -184,6 +193,163 @@ func _add_barrel(position: Vector3) -> void:
     shape.height = 1.1
     collision.shape = shape
     obstacle.add_child(collision)
+
+func _build_race_system() -> void:
+    _add_finish_line()
+    
+    var canvas := CanvasLayer.new()
+    canvas.name = "RaceHUD"
+    add_child(canvas)
+
+    race_label = Label.new()
+    race_label.position = Vector2(28.0, 122.0)
+    race_label.size = Vector2(330.0, 34.0)
+    race_label.text = "RACE 0%"
+    race_label.add_theme_font_size_override("font_size", 22)
+    canvas.add_child(race_label)
+
+    race_bar = ProgressBar.new()
+    race_bar.position = Vector2(28.0, 160.0)
+    race_bar.size = Vector2(330.0, 18.0)
+    race_bar.min_value = 0.0
+    race_bar.max_value = 100.0
+    race_bar.value = 0.0
+    race_bar.show_percentage = false
+    canvas.add_child(race_bar)
+
+    var checkpoint_label := Label.new()
+    checkpoint_label.name = "CheckpointInfo"
+    checkpoint_label.position = Vector2(28.0, 184.0)
+    checkpoint_label.size = Vector2(330.0, 30.0)
+    checkpoint_label.text = "FINISH: 81m"
+    checkpoint_label.add_theme_font_size_override("font_size", 16)
+    canvas.add_child(checkpoint_label)
+
+func _add_finish_line() -> void:
+    var finish := Area3D.new()
+    finish.name = "FinishLine"
+    finish.position = Vector3(10.0, 1.05, -66.0)
+    add_child(finish)
+
+    var collision := CollisionShape3D.new()
+    var shape := BoxShape3D.new()
+    shape.size = Vector3(12.0, 2.2, 1.0)
+    collision.shape = shape
+    finish.add_child(collision)
+
+    var stripe := MeshInstance3D.new()
+    var stripe_mesh := BoxMesh.new()
+    stripe_mesh.size = Vector3(12.0, 0.06, 1.0)
+    stripe.mesh = stripe_mesh
+    stripe.position.y = -0.98
+    var stripe_material := StandardMaterial3D.new()
+    stripe_material.albedo_color = Color(1.0, 1.0, 1.0)
+    stripe_material.emission_enabled = true
+    stripe_material.emission = Color(0.5, 0.5, 0.5)
+    stripe.material_override = stripe_material
+    finish.add_child(stripe)
+
+    for x in [-4.5, -3.0, -1.5, 0.0, 1.5, 3.0, 4.5]:
+        var tile := MeshInstance3D.new()
+        var tile_mesh := BoxMesh.new()
+        tile_mesh.size = Vector3(1.5, 0.07, 1.02)
+        tile.mesh = tile_mesh
+        tile.position = Vector3(x, -0.93, 0.0)
+        var tile_material := StandardMaterial3D.new()
+        tile_material.albedo_color = Color(0.04 if int((x + 4.5) / 1.5) % 2 == 0 else 0.9, 0.04, 0.04)
+        tile.material_override = tile_material
+        finish.add_child(tile)
+
+    var arch_left := MeshInstance3D.new()
+    var arch_mesh := BoxMesh.new()
+    arch_mesh.size = Vector3(0.35, 3.0, 0.35)
+    arch_left.mesh = arch_mesh
+    arch_left.position = Vector3(-5.3, 1.5, 0.0)
+    finish.add_child(arch_left)
+
+    var arch_right := arch_left.duplicate()
+    arch_right.position.x = 5.3
+    finish.add_child(arch_right)
+
+    var banner := MeshInstance3D.new()
+    var banner_mesh := BoxMesh.new()
+    banner_mesh.size = Vector3(10.6, 0.65, 0.28)
+    banner.mesh = banner_mesh
+    banner.position = Vector3(0.0, 3.0, 0.0)
+    var banner_material := StandardMaterial3D.new()
+    banner_material.albedo_color = Color(0.08, 0.08, 0.1)
+    banner.material_override = banner_material
+    finish.add_child(banner)
+
+    finish.body_entered.connect(_on_finish_body_entered)
+
+func _process(_delta: float) -> void:
+    if race_finished:
+        return
+
+    var car := get_node_or_null("PlayerCar")
+    if not car:
+        return
+
+    var distance_total := abs(finish_z - race_start_z)
+    var distance_done := clamp(abs(race_start_z - car.global_position.z), 0.0, distance_total)
+    var progress := clamp((distance_done / distance_total) * 100.0, 0.0, 100.0)
+    race_bar.value = progress
+    race_label.text = "RACE %d%%" % roundi(progress)
+
+    var remaining := max(0.0, distance_total - distance_done)
+    var checkpoint := get_node_or_null("RaceHUD/CheckpointInfo")
+    if checkpoint:
+        checkpoint.text = "FINISH: %dm" % roundi(remaining)
+
+func _on_finish_body_entered(body: Node3D) -> void:
+    if race_finished or body.name != "PlayerCar":
+        return
+    race_finished = true
+    _show_finish_overlay()
+
+func _show_finish_overlay() -> void:
+    if is_instance_valid(mobile_controls):
+        mobile_controls.visible = false
+
+    finish_overlay = ColorRect.new()
+    finish_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    finish_overlay.color = Color(0.0, 0.0, 0.0, 0.72)
+    finish_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+
+    var canvas := CanvasLayer.new()
+    canvas.name = "FinishUI"
+    canvas.layer = 30
+    add_child(canvas)
+    canvas.add_child(finish_overlay)
+
+    var title := Label.new()
+    title.text = "🏁 RACE FINISHED!"
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title.set_anchors_preset(Control.PRESET_CENTER)
+    title.position = Vector2(-320.0, -140.0)
+    title.size = Vector2(640.0, 100.0)
+    title.add_theme_font_size_override("font_size", 54)
+    finish_overlay.add_child(title)
+
+    var message := Label.new()
+    message.text = "You reached the finish line!"
+    message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    message.set_anchors_preset(Control.PRESET_CENTER)
+    message.position = Vector2(-320.0, -35.0)
+    message.size = Vector2(640.0, 50.0)
+    message.add_theme_font_size_override("font_size", 24)
+    finish_overlay.add_child(message)
+
+    finish_button = Button.new()
+    finish_button.text = "RACE AGAIN"
+    finish_button.set_anchors_preset(Control.PRESET_CENTER)
+    finish_button.position = Vector2(-140.0, 55.0)
+    finish_button.size = Vector2(280.0, 80.0)
+    finish_button.focus_mode = Control.FOCUS_NONE
+    finish_button.add_theme_font_size_override("font_size", 28)
+    finish_button.pressed.connect(_restart_game)
+    finish_overlay.add_child(finish_button)
 
 func _build_health_hud() -> void:
     var canvas := CanvasLayer.new()
