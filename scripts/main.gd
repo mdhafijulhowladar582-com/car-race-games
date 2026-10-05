@@ -46,27 +46,6 @@ func _build_environment() -> void:
     add_child(light)
 
 func _build_road() -> void:
-    var road_body := StaticBody3D.new()
-    road_body.position = Vector3(0.0, -0.1, -25.0)
-    add_child(road_body)
-
-    var road_mesh := MeshInstance3D.new()
-    var road_box := BoxMesh.new()
-    road_box.size = Vector3(12.0, 0.2, 80.0)
-    road_mesh.mesh = road_box
-
-    var road_material := StandardMaterial3D.new()
-    road_material.albedo_color = Color(0.12, 0.12, 0.14)
-    road_mesh.material_override = road_material
-    road_body.add_child(road_mesh)
-
-    var collision := CollisionShape3D.new()
-    var shape := BoxShape3D.new()
-    shape.size = Vector3(12.0, 0.2, 80.0)
-    collision.shape = shape
-    road_body.add_child(collision)
-
-func _build_road() -> void:
     var road_material := StandardMaterial3D.new()
     road_material.albedo_color = Color(0.12, 0.12, 0.14)
     road_material.roughness = 0.92
