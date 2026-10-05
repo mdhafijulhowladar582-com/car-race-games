@@ -239,29 +239,163 @@ func _build_car() -> void:
     collision.shape = box
 
     var body := get_node("Body") as MeshInstance3D
-    var mesh := BoxMesh.new()
-    mesh.size = Vector3(2.2, 0.9, 4.0)
-    body.mesh = mesh
+    body.mesh = null
 
-    var material := StandardMaterial3D.new()
-    material.albedo_color = Color(0.8, 0.08, 0.05)
-    body.material_override = material
+    var car_root := Node3D.new()
+    car_root.name = "CarVisual"
+    add_child(car_root)
 
+    _add_body(car_root)
+    _add_cabin(car_root)
+    _add_bumpers(car_root)
+    _add_lights(car_root)
+    _add_spoiler(car_root)
     _add_wheel(Vector3(-1.0, -0.45, -1.25))
     _add_wheel(Vector3(1.0, -0.45, -1.25))
     _add_wheel(Vector3(-1.0, -0.45, 1.25))
     _add_wheel(Vector3(1.0, -0.45, 1.25))
 
+func _add_body(parent: Node3D) -> void:
+    var body_mesh := MeshInstance3D.new()
+    var mesh := BoxMesh.new()
+    mesh.size = Vector3(2.2, 0.78, 4.0)
+    body_mesh.mesh = mesh
+    body_mesh.position = Vector3(0.0, 0.02, 0.0)
+    body_mesh.scale = Vector3(1.0, 1.0, 1.0)
+    body_mesh.material_override = _material(Color(0.82, 0.04, 0.025), 0.25)
+    parent.add_child(body_mesh)
+
+    var hood := MeshInstance3D.new()
+    var hood_mesh := BoxMesh.new()
+    hood_mesh.size = Vector3(1.9, 0.16, 1.35)
+    hood.mesh = hood_mesh
+    hood.position = Vector3(0.0, 0.49, -1.05)
+    hood.material_override = _material(Color(0.95, 0.06, 0.035), 0.2)
+    parent.add_child(hood)
+
+func _add_cabin(parent: Node3D) -> void:
+    var cabin := MeshInstance3D.new()
+    var cabin_mesh := BoxMesh.new()
+    cabin_mesh.size = Vector3(1.65, 0.72, 1.65)
+    cabin.mesh = cabin_mesh
+    cabin.position = Vector3(0.0, 0.63, 0.45)
+    cabin.rotation_degrees = Vector3(-3.0, 0.0, 0.0)
+    cabin.material_override = _material(Color(0.035, 0.05, 0.07), 0.05)
+    parent.add_child(cabin)
+
+    var windshield := MeshInstance3D.new()
+    var windshield_mesh := BoxMesh.new()
+    windshield_mesh.size = Vector3(1.48, 0.42, 0.08)
+    windshield.mesh = windshield_mesh
+    windshield.position = Vector3(0.0, 0.72, -0.38)
+    windshield.rotation_degrees = Vector3(-18.0, 0.0, 0.0)
+    windshield.material_override = _material(Color(0.08, 0.18, 0.24), 0.05)
+    parent.add_child(windshield)
+
+    var rear_window := MeshInstance3D.new()
+    var rear_mesh := BoxMesh.new()
+    rear_mesh.size = Vector3(1.48, 0.38, 0.08)
+    rear_window.mesh = rear_mesh
+    rear_window.position = Vector3(0.0, 0.72, 1.28)
+    rear_window.rotation_degrees = Vector3(18.0, 0.0, 0.0)
+    rear_window.material_override = _material(Color(0.08, 0.18, 0.24), 0.05)
+    parent.add_child(rear_window)
+
+func _add_bumpers(parent: Node3D) -> void:
+    var front := MeshInstance3D.new()
+    var front_mesh := BoxMesh.new()
+    front_mesh.size = Vector3(2.05, 0.25, 0.25)
+    front.mesh = front_mesh
+    front.position = Vector3(0.0, -0.18, -2.02)
+    front.material_override = _material(Color(0.04, 0.04, 0.05), 0.15)
+    parent.add_child(front)
+
+    var rear := MeshInstance3D.new()
+    var rear_mesh := BoxMesh.new()
+    rear_mesh.size = Vector3(2.05, 0.25, 0.25)
+    rear.mesh = rear_mesh
+    rear.position = Vector3(0.0, -0.18, 2.02)
+    rear.material_override = _material(Color(0.04, 0.04, 0.05), 0.15)
+    parent.add_child(rear)
+
+func _add_lights(parent: Node3D) -> void:
+    var left_headlight := MeshInstance3D.new()
+    var head_mesh := BoxMesh.new()
+    head_mesh.size = Vector3(0.48, 0.16, 0.12)
+    left_headlight.mesh = head_mesh
+    left_headlight.position = Vector3(-0.68, 0.2, -2.04)
+    left_headlight.material_override = _emission_material(Color(0.85, 0.95, 1.0))
+    parent.add_child(left_headlight)
+
+    var right_headlight := left_headlight.duplicate()
+    right_headlight.position.x = 0.68
+    parent.add_child(right_headlight)
+
+    var left_tail := MeshInstance3D.new()
+    var tail_mesh := BoxMesh.new()
+    tail_mesh.size = Vector3(0.5, 0.15, 0.12)
+    left_tail.mesh = tail_mesh
+    left_tail.position = Vector3(-0.68, 0.18, 2.04)
+    left_tail.material_override = _emission_material(Color(1.0, 0.015, 0.01))
+    parent.add_child(left_tail)
+
+    var right_tail := left_tail.duplicate()
+    right_tail.position.x = 0.68
+    parent.add_child(right_tail)
+
+func _add_spoiler(parent: Node3D) -> void:
+    var supports := MeshInstance3D.new()
+    var support_mesh := BoxMesh.new()
+    support_mesh.size = Vector3(1.35, 0.55, 0.12)
+    supports.mesh = support_mesh
+    supports.position = Vector3(0.0, 0.62, 1.72)
+    supports.material_override = _material(Color(0.03, 0.03, 0.035), 0.1)
+    parent.add_child(supports)
+
+    var wing := MeshInstance3D.new()
+    var wing_mesh := BoxMesh.new()
+    wing_mesh.size = Vector3(2.0, 0.14, 0.42)
+    wing.mesh = wing_mesh
+    wing.position = Vector3(0.0, 0.9, 1.72)
+    wing.rotation_degrees = Vector3(-6.0, 0.0, 0.0)
+    wing.material_override = _material(Color(0.025, 0.025, 0.03), 0.1)
+    parent.add_child(wing)
+
 func _add_wheel(pos: Vector3) -> void:
+    var wheel_root := Node3D.new()
+    wheel_root.position = pos
+    add_child(wheel_root)
+
     var wheel := MeshInstance3D.new()
     var mesh := CylinderMesh.new()
     mesh.top_radius = 0.42
     mesh.bottom_radius = 0.42
     mesh.height = 0.28
     wheel.mesh = mesh
-    wheel.position = pos
     wheel.rotation_degrees = Vector3(0, 0, 90)
+    wheel.material_override = _material(Color(0.015, 0.015, 0.018), 0.1)
+    wheel_root.add_child(wheel)
+
+    var hub := MeshInstance3D.new()
+    var hub_mesh := CylinderMesh.new()
+    hub_mesh.top_radius = 0.18
+    hub_mesh.bottom_radius = 0.18
+    hub_mesh.height = 0.3
+    hub.mesh = hub_mesh
+    hub.rotation_degrees = Vector3(0, 0, 90)
+    hub.material_override = _material(Color(0.65, 0.67, 0.7), 0.35)
+    wheel_root.add_child(hub)
+
+func _material(color: Color, metallic: float) -> StandardMaterial3D:
     var material := StandardMaterial3D.new()
-    material.albedo_color = Color(0.02, 0.02, 0.02)
-    wheel.material_override = material
-    add_child(wheel)
+    material.albedo_color = color
+    material.metallic = metallic
+    material.roughness = 0.32
+    return material
+
+func _emission_material(color: Color) -> StandardMaterial3D:
+    var material := _material(color, 0.1)
+    material.emission_enabled = true
+    material.emission = color
+    material.emission_energy_multiplier = 3.0
+    return material
