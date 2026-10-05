@@ -26,8 +26,10 @@ var speed := 0.0
 var steering := 0.0
 var health := 100.0
 var damage_timer := 0.0
+var is_game_over := false
 
 signal health_changed(current_health: float, maximum_health: float)
+signal game_over
 
 func _ready() -> void:
     health = max_health
@@ -37,12 +39,18 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
     damage_timer = max(0.0, damage_timer - delta)
 
+    if is_game_over:
+        speed = move_toward(speed, 0.0, braking * delta)
+        steering = move_toward(steering, 0.0, steering_response * delta)
+        _apply_movement(delta)
+        return
+
     var throttle := Input.get_axis("brake", "accelerate")
     var steer_input := Input.get_axis("steer_left", "steer_right")
 
     _update_speed(throttle, delta)
     _update_steering(steer_input, delta)
-    _move_car(delta)
+    _apply_movement(delta)
 
 func _update_speed(throttle: float, delta: float) -> void:
     if throttle > 0.0:
@@ -59,7 +67,7 @@ func _update_steering(steer_input: float, delta: float) -> void:
     var target_steering := steer_input * steering_sensitivity
     steering = move_toward(steering, target_steering, steering_response * delta)
 
-func _move_car(delta: float) -> void:
+func _apply_movement(delta: float) -> void:
     var speed_ratio := clamp(abs(speed) / max_speed, 0.0, 1.0)
     var turn_strength := steering * lerp(1.0, steering_at_speed, speed_ratio)
 
@@ -78,22 +86,40 @@ func _move_car(delta: float) -> void:
 
     move_and_slide()
 
-    for i in get_slide_collision_count():
-        var collision := get_slide_collision(i)
-        var impact_speed := collision.get_travel().length() / max(delta, 0.001)
-        if impact_speed > 4.0:
-            var damage := clamp(impact_speed * 0.9, collision_damage * 0.5, collision_damage * 2.0)
-            take_damage(damage)
+    if not is_game_over:
+        for i in get_slide_collision_count():
+            var collision := get_slide_collision(i)
+            var impact_speed := collision.get_travel().length() / max(delta, 0.001)
+            if impact_speed > 4.0:
+                var damage := clamp(impact_speed * 0.9, collision_damage * 0.5, collision_damage * 2.0)
+                take_damage(damage)
 
 func take_damage(amount: float) -> void:
-    if damage_timer > 0.0 or health <= 0.0:
+    if damage_timer > 0.0 or health <= 0.0 or is_game_over:
         return
 
     health = clamp(health - amount, 0.0, max_health)
     damage_timer = damage_cooldown
     health_changed.emit(health, max_health)
 
+    if health <= 0.0:
+        _trigger_game_over()
+
+func _trigger_game_over() -> void:
+    if is_game_over:
+        return
+
+    is_game_over = true
+    speed = 0.0
+    steering = 0.0
+    game_over.emit()
+
+func restart_game() -> void:
+    get_tree().reload_current_scene()
+
 func repair(amount: float) -> void:
+    if is_game_over:
+        return
     health = clamp(health + amount, 0.0, max_health)
     health_changed.emit(health, max_health)
 
