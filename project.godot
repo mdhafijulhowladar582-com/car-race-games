@@ -19,19 +19,19 @@ window/stretch/mode="canvas_items"
 [input]
 accelerate={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"physical_keycode":87), Object(InputEventKey,"physical_keycode":4194320), Object(InputEventJoypadButton,"button_index":7)]
+"events": [Object(InputEventKey,"physical_keycode":87), Object(InputEventKey,"physical_keycode":4194320), Object(InputEventJoypadMotion,"axis":5,"axis_value":1.0)]
 }
 brake={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"physical_keycode":83), Object(InputEventKey,"physical_keycode":4194322), Object(InputEventJoypadButton,"button_index":6)]
+"events": [Object(InputEventKey,"physical_keycode":83), Object(InputEventKey,"physical_keycode":4194322), Object(InputEventJoypadMotion,"axis":4,"axis_value":1.0)]
 }
 steer_left={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"physical_keycode":65), Object(InputEventKey,"physical_keycode":4194311), Object(InputEventJoypadMotion,"axis":0,"axis_value":-1.0)]
+"events": [Object(InputEventKey,"physical_keycode":65), Object(InputEventKey,"physical_keycode":4194319), Object(InputEventJoypadMotion,"axis":0,"axis_value":-1.0)]
 }
 steer_right={
 "deadzone": 0.5,
-"events": [Object(InputEventKey,"physical_keycode":68), Object(InputEventKey,"physical_keycode":4194313), Object(InputEventJoypadMotion,"axis":0,"axis_value":1.0)]
+"events": [Object(InputEventKey,"physical_keycode":68), Object(InputEventKey,"physical_keycode":4194321), Object(InputEventJoypadMotion,"axis":0,"axis_value":1.0)]
 }
 
 [rendering]
