@@ -2,13 +2,20 @@ extends Node
 
 signal leaderboard_loaded(entries: Array)
 signal leaderboard_failed(message: String)
+signal auth_changed(authenticated: bool, display_name: String)
+signal auth_failed(message: String)
 
 const FIREBASE_PROJECT_ID := "carres-8d409"
 const FIRESTORE_BASE_URL := "https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents" % FIREBASE_PROJECT_ID
 const LEADERBOARD_PATH := "/leaderboard"
+const FIREBASE_API_KEY := "AIzaSyAhvuZL5GDJuq3NedLMAGPt7XujpZRow"
+const AUTH_URL := "https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=%s" % FIREBASE_API_KEY
 
 var http: HTTPRequest
 var id_token := ""
+var refresh_token := ""
+var user_id := ""
+var display_name := ""
 
 func _ready() -> void:
     http = HTTPRequest.new()
@@ -24,6 +31,66 @@ func clear_id_token() -> void:
 
 func is_authenticated() -> bool:
     return not id_token.is_empty()
+
+func is_authenticated() -> bool:
+    return not id_token.is_empty()
+
+func sign_in_with_google_id_token(google_id_token: String) -> void:
+    var token := google_id_token.strip_edges()
+    if token.is_empty():
+        auth_failed.emit("Google ID token is empty.")
+        return
+
+    var auth_http := HTTPRequest.new()
+    auth_http.name = "FirebaseAuthHTTP"
+    add_child(auth_http)
+    auth_http.request_completed.connect(_on_google_auth_completed.bind(auth_http))
+
+    var headers := PackedStringArray(["Content-Type: application/json"])
+    var payload := {
+        "postBody": "id_token=%s&providerId=google.com" % Uri.encode_www_form_component(token),
+        "requestUri": "https://localhost",
+        "returnIdpCredential": true,
+        "returnSecureToken": true
+    }
+    var error := auth_http.request(AUTH_URL, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+    if error != OK:
+        auth_failed.emit("Firebase Authentication request could not start.")
+        auth_http.queue_free()
+
+func sign_out() -> void:
+    id_token = ""
+    refresh_token = ""
+    user_id = ""
+    display_name = ""
+    auth_changed.emit(false, "")
+
+func _on_google_auth_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, auth_http: HTTPRequest) -> void:
+    var response = JSON.parse_string(body.get_string_from_utf8())
+    auth_http.queue_free()
+
+    if result != HTTPRequest.RESULT_SUCCESS:
+        auth_failed.emit("Firebase Authentication network connection failed.")
+        return
+
+    if response_code < 200 or response_code >= 300 or not (response is Dictionary):
+        var message := "Firebase Authentication failed (%d)." % response_code
+        if response is Dictionary and response.has("error"):
+            var error_data: Dictionary = response["error"]
+            if error_data.has("message"):
+                message = str(error_data["message"])
+        auth_failed.emit(message)
+        return
+
+    id_token = str(response.get("idToken", ""))
+    refresh_token = str(response.get("refreshToken", ""))
+    user_id = str(response.get("localId", ""))
+    display_name = str(response.get("displayName", ""))
+    if id_token.is_empty() or user_id.is_empty():
+        auth_failed.emit("Firebase Authentication returned incomplete credentials.")
+        return
+
+    auth_changed.emit(true, display_name)
 
 func load_public_leaderboard() -> void:
     if not http:
