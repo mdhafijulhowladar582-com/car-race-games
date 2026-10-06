@@ -189,6 +189,7 @@ func _physics_process(delta: float) -> void:
         return
 
     race_elapsed += delta
+    _update_ai_racing(delta)
     var progress := clampf((race_start_z - car.global_position.z) / (race_start_z - finish_z), 0.0, 1.0)
     current_checkpoint = clampi(int(floor(progress * total_checkpoints)), 0, total_checkpoints)
 
@@ -400,10 +401,29 @@ func _update_rewards_hud() -> void:
         reward_label.text = "Rewards | XP: %d | Coins: %d" % [xp, coins]
 
 func _update_ai_racing(_delta: float) -> void:
-    for i in range(ai_opponents.size()):
-        var ai := ai_opponents[i] as Node3D
-        if ai:
-            ai.position.z = clamp(ai.position.z - 0.1, -120.0, 50.0)
+    ai_race_progress.clear()
+    ai_last_positions.clear()
+
+    var player := get_node_or_null("PlayerCar")
+    var player_progress := 0.0
+    if player:
+        player_progress = clampf((race_start_z - player.global_position.z) / (race_start_z - finish_z), 0.0, 1.0)
+
+    for ai in ai_opponents:
+        if not is_instance_valid(ai):
+            continue
+
+        var progress := clampf((race_start_z - ai.global_position.z) / (race_start_z - finish_z), 0.0, 1.0)
+        ai_race_progress.append(progress)
+
+        if progress >= 1.0 and ai.has_method("start_race"):
+            ai.race_active = false
+            ai.finished = true
+
+        if player_progress > progress:
+            ai_last_positions.append(1)
+        else:
+            ai_last_positions.append(0)
 
 func _on_health_changed(current_health: float, maximum_health: float) -> void:
     if health_bar:
