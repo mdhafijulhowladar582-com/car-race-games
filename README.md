@@ -1,3 +1,17 @@
+## Final Optimization and Release
+
+- Android and mobile rendering use Godot Compatibility renderer
+- Physics uses GodotPhysics
+- Procedural visuals and audio avoid large external runtime assets
+- Mobile HUD uses the existing 1280x720 canvas stretch configuration
+- Graphics settings provide LOW, MEDIUM and HIGH rendering scales
+- Local save and leaderboard data use device storage
+- Project is structured for Godot 4.x Android export
+- APK/AAB export requires Godot Android export templates plus Android SDK/JDK
+- Release builds require a configured Android signing key
+- Final runtime validation must be performed on the target Android devices before release
+- Recommended release checks: install APK, test touch controls, test audio, test save/load, test each map/weather/mode, verify FPS, then package a signed release
+
 ## Leaderboard
 
 - Local leaderboard with the 10 fastest completed race times
