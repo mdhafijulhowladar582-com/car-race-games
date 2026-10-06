@@ -32,8 +32,8 @@ func clear_id_token() -> void:
 func is_authenticated() -> bool:
     return not id_token.is_empty()
 
-func is_authenticated() -> bool:
-    return not id_token.is_empty()
+func continue_as_guest() -> void:
+    sign_out()
 
 func sign_in_with_google_id_token(google_id_token: String) -> void:
     var token := google_id_token.strip_edges()
