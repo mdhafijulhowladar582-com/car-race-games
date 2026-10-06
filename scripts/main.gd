@@ -992,7 +992,7 @@ func _save_settings() -> void:
 func _build_leaderboard_button() -> void:
     var button := Button.new()
     button.text = "Leaderboard"
-    button.position = Vector2(1025.0, 65.0)
+    button.position = Vector2(1000.0, 65.0)
     button.size = Vector2(150.0, 52.0)
     button.pressed.connect(_show_leaderboard)
     add_child(button)
@@ -2135,7 +2135,7 @@ func _add_curve_apex_marker(position: Vector3) -> void:
 func _build_car_select_button() -> void:
     var button := Button.new()
     button.text = "CARS"
-    button.position = Vector2(1035.0, 12.0)
+    button.position = Vector2(1050.0, 12.0)
     button.size = Vector2(115.0, 42.0)
     button.pressed.connect(_show_car_selector)
     add_child(button)
