@@ -638,7 +638,7 @@ func _play_brake_audio() -> void:
     if is_instance_valid(brake_player) and not brake_player.playing:
         brake_player.play()
 
-func _update_driving_audio() -> void:
+func _update_driving_audio(_delta: float) -> void:
     var speed_ratio := clamp(abs(speed) / max_speed, 0.0, 1.0)
     var braking_now := Input.is_action_pressed("brake") and abs(speed) > 1.0
     var steering_now := abs(steering) > 0.55 and abs(speed) > 8.0
