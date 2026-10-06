@@ -221,14 +221,37 @@ func _physics_process(delta: float) -> void:
 func _build_mobile_controls() -> void:
     mobile_controls = CanvasLayer.new()
     add_child(mobile_controls)
+
     var root := Control.new()
     root.set_anchors_preset(Control.PRESET_FULL_RECT)
+    root.mouse_filter = Control.MOUSE_FILTER_IGNORE
     mobile_controls.add_child(root)
+
     var hint := Label.new()
-    hint.text = "Steer: A/D or Left/Right\nAccelerate: W / Up\nBrake: S / Down"
+    hint.text = "Touch Controls"
     hint.position = Vector2(18.0, 18.0)
     hint.add_theme_font_size_override("font_size", 18)
     root.add_child(hint)
+
+    _add_touch_button(root, "LEFT", Vector2(35.0, 590.0), "steer_left")
+    _add_touch_button(root, "RIGHT", Vector2(155.0, 590.0), "steer_right")
+    _add_touch_button(root, "BRAKE", Vector2(930.0, 590.0), "brake")
+    _add_touch_button(root, "GO", Vector2(1050.0, 590.0), "accelerate")
+
+func _add_touch_button(parent: Control, label_text: String, button_position: Vector2, action_name: String) -> void:
+    var button := Button.new()
+    button.text = label_text
+    button.position = button_position
+    button.size = Vector2(100.0, 82.0)
+    button.focus_mode = Control.FOCUS_NONE
+    button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+    button.button_down.connect(func() -> void:
+        Input.action_press(action_name)
+    )
+    button.button_up.connect(func() -> void:
+        Input.action_release(action_name)
+    )
+    parent.add_child(button)
 
 func _build_health_hud() -> void:
     var canvas := CanvasLayer.new()
