@@ -1800,7 +1800,7 @@ func _build_car_select(parent: Control) -> void:
     _add_car_button(parent, "RALLY", Vector2(100.0, 25.0))
 
     customization_label = Label.new()
-    customization_label.text = "COLOR: RED   WHEELS: SPORT   UPGRADE: 0/3"
+    _update_car_selection_label()
     customization_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     customization_label.set_anchors_preset(Control.PRESET_CENTER)
     customization_label.position = Vector2(-360.0, 95.0)
@@ -1822,6 +1822,10 @@ func _add_car_button(parent: Control, car_name: String, button_position: Vector2
     button.text = car_name
     button.position = button_position
     button.size = Vector2(160.0, 55.0)
+    button.pressed.connect(func() -> void:
+        selected_car = car_name
+        _update_car_selection_label()
+    )
     parent.add_child(button)
 
 func _add_custom_button(parent: Control, label_name: String, button_position: Vector2, action_name: String) -> void:
@@ -1829,7 +1833,56 @@ func _add_custom_button(parent: Control, label_name: String, button_position: Ve
     button.text = label_name
     button.position = button_position
     button.size = Vector2(150.0, 42.0)
+    button.pressed.connect(func() -> void:
+        _apply_customization(action_name)
+    )
     parent.add_child(button)
+
+func _apply_customization(action_name: String) -> void:
+    match action_name:
+        "color_red":
+            selected_color = Color(0.82, 0.025, 0.02)
+        "color_blue":
+            selected_color = Color(0.04, 0.22, 0.88)
+        "color_green":
+            selected_color = Color(0.05, 0.7, 0.18)
+        "wheel_sport":
+            selected_wheels = "SPORT"
+        "wheel_black":
+            selected_wheels = "BLACK"
+        "wheel_gold":
+            selected_wheels = "GOLD"
+        "upgrade":
+            if upgrade_level < 3:
+                upgrade_level += 1
+        _:
+            return
+    _update_car_selection_label()
+
+func _update_car_selection_label() -> void:
+    var stats := {
+        "SPORTS": [34, 18, 2.2],
+        "MUSCLE": [31, 20, 1.9],
+        "GT": [36, 17, 2.4],
+        "SUPERCAR": [42, 23, 2.8],
+        "HYPER": [48, 26, 3.0],
+        "RALLY": [33, 21, 2.5]
+    }
+    var values: Array = stats.get(selected_car, [34, 18, 2.2])
+    var speed_value := float(values[0]) + upgrade_level * 2.0
+    var acceleration_value := float(values[1]) + upgrade_level * 1.5
+    var handling_value := float(values[2]) + upgrade_level * 0.1
+    if car_label:
+        car_label.text = "CAR: %s\nSpeed %.0f | Acceleration %.1f | Handling %.1f" % [selected_car, speed_value, acceleration_value, handling_value]
+    if customization_label:
+        customization_label.text = "COLOR: %s   WHEELS: %s   UPGRADE: %d/3" % [_get_color_name(), selected_wheels, upgrade_level]
+
+func _get_color_name() -> String:
+    if selected_color.is_equal_approx(Color(0.04, 0.22, 0.88)):
+        return "BLUE"
+    if selected_color.is_equal_approx(Color(0.05, 0.7, 0.18)):
+        return "GREEN"
+    return "RED"
 
 func _build_garage(parent: Control) -> void:
     var label := Label.new()
