@@ -199,6 +199,7 @@ func _physics_process(delta: float) -> void:
     _apply_movement(delta)
     _update_engine_audio(delta)
     _update_driving_audio(delta)
+    _update_camera(delta)
     _update_effects()
 
     if Input.is_action_pressed("brake") and abs(speed) > 1.0:
@@ -233,6 +234,7 @@ func _update_camera(delta: float) -> void:
 
     var target_rotation := camera_base_rotation
     target_rotation.x -= speed_ratio * 2.0
+    target_rotation.y += steer_ratio * 1.8
     target_rotation.z = -steer_ratio * 3.2 + shake_y * 1.8
 
     camera.position = camera.position.lerp(target_position, minf(delta * 7.0, 1.0))
