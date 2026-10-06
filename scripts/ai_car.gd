@@ -4,7 +4,13 @@ extends CharacterBody3D
 @export var acceleration := 11.0
 @export var steering_speed := 2.2
 @export var waypoint_reach := 4.0
+@export var corner_slowdown := 0.48
+@export var steering_response := 4.5
+@export var target_speed_variation := 0.08
+@export var recovery_strength := 2.0
 var speed := 0.0
+var target_speed := 22.0
+var race_time := 0.0
 var waypoint_index := 0
 var waypoints: Array[Vector3] = []
 var race_active := false
@@ -17,6 +23,7 @@ func setup(route: Array[Vector3], start_index: int = 0) -> void:
 
 func start_race() -> void:
     race_active = true
+    target_speed = max_speed * (1.0 + sin(get_instance_id() * 1.73) * target_speed_variation)
 
 func _physics_process(delta: float) -> void:
     if not race_active or finished or waypoints.is_empty():
@@ -29,14 +36,27 @@ func _physics_process(delta: float) -> void:
         waypoint_index = (waypoint_index + 1) % waypoints.size()
         target = waypoints[waypoint_index]
         offset = target - global_position
-    if offset.length() > 0.1:
-        var desired := atan2(-offset.x, -offset.z)
-        var turn := wrapf(desired - rotation.y, -PI, PI)
-        rotation.y += clamp(turn, -steering_speed * delta, steering_speed * delta)
-    speed = move_toward(speed, max_speed, acceleration * delta)
+    race_time += delta
+    var target_distance := offset.length()
+    var desired := rotation.y
+    if target_distance > 0.1:
+        desired = atan2(-offset.x, -offset.z)
+    var turn := wrapf(desired - rotation.y, -PI, PI)
+    var turn_ratio := clamp(abs(turn) / PI, 0.0, 1.0)
+    var adaptive_speed := target_speed * (1.0 - corner_slowdown * turn_ratio)
+    adaptive_speed = max(adaptive_speed, target_speed * 0.52)
+    speed = move_toward(speed, adaptive_speed, acceleration * (1.0 - turn_ratio * 0.35) * delta)
+    var steering_limit := lerp(steering_speed, steering_speed * 0.58, clamp(speed / max_speed, 0.0, 1.0))
+    rotation.y += clamp(turn, -steering_limit * delta, steering_limit * delta)
+
     var forward := -global_transform.basis.z
-    velocity.x = forward.x * speed
-    velocity.z = forward.z * speed
+    var right := global_transform.basis.x
+    var desired_velocity := forward * speed
+    var lateral_velocity := right * velocity.dot(right)
+    var grip := clamp((1.0 - turn_ratio * 0.35) * recovery_strength * delta, 0.0, 1.0)
+    lateral_velocity = lateral_velocity.lerp(Vector3.ZERO, grip)
+    velocity.x = (desired_velocity + lateral_velocity).x
+    velocity.z = (desired_velocity + lateral_velocity).z
     velocity.y = -0.2
     move_and_slide()
 
