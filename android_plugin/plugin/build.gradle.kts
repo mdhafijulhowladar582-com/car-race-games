@@ -32,12 +32,16 @@ dependencies {
     compileOnly("com.google.android.gms:play-services-auth:21.4.0")
 }
 
-tasks.register<Copy>("copyAarToProject") {
-    from(layout.buildDirectory.dir("outputs/aar"))
-    include("FirebaseGoogleSignIn-debug.aar", "FirebaseGoogleSignIn-release.aar")
-    into(layout.projectDirectory.dir("../addons/firebase_google_signin/bin"))
+tasks.register<Copy>("copyDebugAarToProject") {
+    from(layout.buildDirectory.file("outputs/aar/FirebaseGoogleSignIn-debug.aar"))
+    into(layout.projectDirectory.dir("../addons/firebase_google_signin/bin/debug"))
+}
+
+tasks.register<Copy>("copyReleaseAarToProject") {
+    from(layout.buildDirectory.file("outputs/aar/FirebaseGoogleSignIn-release.aar"))
+    into(layout.projectDirectory.dir("../addons/firebase_google_signin/bin/release"))
 }
 
 tasks.named("assemble") {
-    finalizedBy("copyAarToProject")
+    finalizedBy("copyDebugAarToProject", "copyReleaseAarToProject")
 }
