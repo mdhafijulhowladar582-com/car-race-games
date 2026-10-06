@@ -80,6 +80,7 @@ var battery_saver := false
 var leaderboard_overlay: ColorRect
 var leaderboard_label: Label
 var leaderboard_entries: Array = []
+var local_leaderboard: Array = []
 var online_leaderboard_url := ""
 var leaderboard_http: HTTPRequest
 var online_leaderboard_status := "OFFLINE"
@@ -124,6 +125,11 @@ func _load_progress() -> void:
         best_time = float(data["best_time"])
     if data.has("achievements"):
         achievements = Array(data["achievements"])
+    if data.has("local_leaderboard") and data["local_leaderboard"] is Array:
+        local_leaderboard = Array(data["local_leaderboard"])
+        local_leaderboard.sort_custom(func(a, b) -> bool:
+            return _leaderboard_time_value(a) < _leaderboard_time_value(b))
+    leaderboard_entries = local_leaderboard.duplicate()
 
 func _save_progress() -> void:
     var data := {
@@ -131,7 +137,8 @@ func _save_progress() -> void:
         "xp": xp,
         "total_races": total_races,
         "best_time": best_time,
-        "achievements": achievements
+        "achievements": achievements,
+        "local_leaderboard": local_leaderboard
     }
     var file := FileAccess.open(save_path, FileAccess.WRITE)
     if file:
@@ -313,7 +320,24 @@ func _finish_race() -> void:
     _update_rewards_hud()
     if race_label:
         race_label.text = "FINISH"
+    _record_local_result()
     _show_race_results(reward_coins, reward_xp)
+
+func _record_local_result() -> void:
+    var entry := {
+        "name": firebase_display_name if firebase_auth_status == "SIGNED_IN" and not firebase_display_name.is_empty() else "GUEST",
+        "time": race_elapsed,
+        "map": selected_map,
+        "car": selected_car,
+        "local": true
+    }
+    local_leaderboard.append(entry)
+    local_leaderboard.sort_custom(func(a, b) -> bool:
+        return _leaderboard_time_value(a) < _leaderboard_time_value(b))
+    if local_leaderboard.size() > 20:
+        local_leaderboard.resize(20)
+    leaderboard_entries = local_leaderboard.duplicate()
+    _save_progress()
 
 func _show_race_results(reward_coins: int, reward_xp: int) -> void:
     if results_canvas and is_instance_valid(results_canvas):
@@ -1012,6 +1036,7 @@ func _setup_firebase_service() -> void:
     firebase_service.auth_changed.connect(_on_firebase_auth_changed)
     firebase_service.auth_failed.connect(_on_firebase_auth_failed)
     online_leaderboard_status = "CONNECTING"
+    firebase_service.continue_as_guest()
     firebase_service.load_public_leaderboard()
 
 func _show_leaderboard() -> void:
@@ -1060,8 +1085,10 @@ func _refresh_leaderboard() -> void:
             text_lines.append("%02d. %s — %s" % [i + 1, str(entry.get("name", "PLAYER")), str(entry.get("time", "--"))])
         leaderboard_label.text = "\n".join(text_lines)
 
-    if online_leaderboard_url.is_empty():
+    if online_leaderboard_url.is_empty() and firebase_auth_status == "GUEST":
         online_leaderboard_status = "OFFLINE"
+    if firebase_auth_status == "GUEST":
+        leaderboard_label.text += "\n\nGUEST MODE • Local scores only"
 
 func _leaderboard_time_value(entry: Variant) -> float:
     if not (entry is Dictionary):
