@@ -563,9 +563,27 @@ func _sync_race_start_to_map() -> void:
         return
     race_start_z = track_path[0].z
     finish_z = track_path[track_path.size() - 1].z
+    race_finished = false
+    race_started = false
+    countdown_time = 3.0
+
     var car := get_node_or_null("PlayerCar")
     if car:
         car.global_position = track_path[0] + Vector3(0.0, 1.0, 0.0)
+        car.velocity = Vector3.ZERO
+        car.speed = 0.0
+
+    for i in range(ai_opponents.size()):
+        var ai := ai_opponents[i]
+        if not is_instance_valid(ai):
+            continue
+        if ai.has_method("setup"):
+            ai.setup(track_path, 0)
+        ai.global_position = track_path[0] + Vector3(ai_racing_offsets[i], 1.0, 0.0)
+        ai.velocity = Vector3.ZERO
+        ai.speed = 0.0
+        ai.race_active = false
+        ai.finished = false
 
 func _build_rewards_hud() -> void:
     reward_label = Label.new()
