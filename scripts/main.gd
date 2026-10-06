@@ -245,7 +245,8 @@ func _physics_process(delta: float) -> void:
 
     race_elapsed += delta
     _update_ai_racing(delta)
-    var progress := clampf((race_start_z - car.global_position.z) / (race_start_z - finish_z), 0.0, 1.0)
+    var progress := _get_track_progress(car.global_position)
+    player_track_progress = progress
     current_checkpoint = clampi(int(floor(progress * total_checkpoints)), 0, total_checkpoints)
 
     if race_bar:
@@ -264,7 +265,7 @@ func _physics_process(delta: float) -> void:
     if position_label:
         position_label.text = "POSITION %d/%d" % [player_race_position, ai_opponents.size() + 1]
 
-    if progress >= 1.0 or car.global_position.z <= finish_z:
+    if progress >= 1.0:
         _finish_race()
 
 func _build_mobile_controls() -> void:
@@ -336,14 +337,14 @@ func _finish_race() -> void:
     elif player_race_position == 3:
         career_stars += 1
     career_races += 1
-    if best_time <= 0.0 or race_elapsed < best_time:
+    if score_valid and (best_time <= 0.0 or race_elapsed < best_time):
         best_time = race_elapsed
     _save_progress()
     _update_rewards_hud()
     if race_label:
         race_label.text = "FINISH"
     _record_local_result()
-    if firebase_auth_status == "SIGNED_IN" and firebase_service:
+    if score_valid and firebase_auth_status == "SIGNED_IN" and firebase_service:
         global_rank = 0
         firebase_service.save_best_score(race_elapsed, selected_map, selected_car)
     _show_race_results(reward_coins, reward_xp)
@@ -746,6 +747,7 @@ func _sync_race_start_to_map() -> void:
         return
     race_start_z = track_path[0].z
     finish_z = track_path[track_path.size() - 1].z
+    _rebuild_track_progress_cache()
     race_finished = false
     race_started = false
     countdown_time = 3.0
@@ -1230,6 +1232,38 @@ func _update_rewards_hud() -> void:
     if reward_label:
         reward_label.text = "Rewards | XP: %d | Coins: %d" % [xp, coins]
 
+func _rebuild_track_progress_cache() -> void:
+    track_segment_lengths.clear()
+    track_total_length = 0.0
+    if track_path.size() < 2:
+        return
+    for i in range(track_path.size() - 1):
+        var segment_length := track_path[i].distance_to(track_path[i + 1])
+        track_segment_lengths.append(segment_length)
+        track_total_length += segment_length
+
+func _get_track_progress(position: Vector3) -> float:
+    if track_path.size() < 2 or track_total_length <= 0.0:
+        return 0.0
+    var best_distance_sq := INF
+    var best_progress := 0.0
+    var accumulated := 0.0
+    for i in range(track_path.size() - 1):
+        var a := track_path[i]
+        var b := track_path[i + 1]
+        var segment := b - a
+        var length_sq := segment.length_squared()
+        var t := 0.0
+        if length_sq > 0.0001:
+            t = clampf((position - a).dot(segment) / length_sq, 0.0, 1.0)
+        var closest := a + segment * t
+        var distance_sq := position.distance_squared_to(closest)
+        if distance_sq < best_distance_sq:
+            best_distance_sq = distance_sq
+            best_progress = (accumulated + track_segment_lengths[i] * t) / track_total_length
+        accumulated += track_segment_lengths[i]
+    return clampf(best_progress, 0.0, 1.0)
+
 func _update_ai_racing(_delta: float) -> void:
     ai_race_progress.clear()
     ai_last_positions.clear()
@@ -1237,13 +1271,13 @@ func _update_ai_racing(_delta: float) -> void:
     var player := get_node_or_null("PlayerCar")
     var player_progress := 0.0
     if player:
-        player_progress = clampf((race_start_z - player.global_position.z) / (race_start_z - finish_z), 0.0, 1.0)
+        player_progress = _get_track_progress(player.global_position)
 
     for ai in ai_opponents:
         if not is_instance_valid(ai):
             continue
 
-        var progress := clampf((race_start_z - ai.global_position.z) / (race_start_z - finish_z), 0.0, 1.0)
+        var progress := _get_track_progress(ai.global_position)
         ai_race_progress.append(progress)
 
         if progress >= 1.0 and ai.has_method("start_race"):
