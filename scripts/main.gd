@@ -90,6 +90,7 @@ var auth_button: Button
 var auth_status_label: Label
 var firebase_auth_status := "GUEST"
 var firebase_display_name := ""
+var global_rank := 0
 var career_level := 1
 var career_wins := 0
 var career_races := 0
@@ -322,6 +323,7 @@ func _finish_race() -> void:
         race_label.text = "FINISH"
     _record_local_result()
     if firebase_auth_status == "SIGNED_IN" and firebase_service:
+        global_rank = 0
         firebase_service.save_best_score(race_elapsed, selected_map, selected_car)
     _show_race_results(reward_coins, reward_xp)
 
@@ -1039,6 +1041,8 @@ func _setup_firebase_service() -> void:
     firebase_service.auth_failed.connect(_on_firebase_auth_failed)
     firebase_service.score_saved.connect(_on_firebase_score_saved)
     firebase_service.score_failed.connect(_on_firebase_score_failed)
+    firebase_service.rank_loaded.connect(_on_firebase_rank_loaded)
+    firebase_service.rank_failed.connect(_on_firebase_rank_failed)
     online_leaderboard_status = "CONNECTING"
     firebase_service.continue_as_guest()
     firebase_service.load_public_leaderboard()
@@ -1090,7 +1094,7 @@ func _refresh_leaderboard() -> void:
             var entry = sorted_entries[i]
             text_lines.append("%02d. %s — %s" % [i + 1, str(entry.get("name", "PLAYER")), _format_race_time(_leaderboard_time_value(entry))])
 
-    var rank := _get_own_rank(sorted_entries)
+    var rank := global_rank if global_rank > 0 else _get_own_rank(sorted_entries)
     if rank > 0:
         text_lines.append("")
         text_lines.append("YOUR RANK: #%d" % rank)
@@ -1155,7 +1159,19 @@ func _on_firebase_auth_changed(authenticated: bool, name: String) -> void:
 func _on_firebase_score_saved() -> void:
     online_leaderboard_status = "CONNECTING"
     if firebase_service:
+        if firebase_service.last_submitted_time > 0.0:
+            firebase_service.load_global_rank(firebase_service.last_submitted_time)
         firebase_service.load_public_leaderboard()
+    if leaderboard_label and is_instance_valid(leaderboard_label):
+        _refresh_leaderboard()
+
+func _on_firebase_rank_loaded(rank: int) -> void:
+    global_rank = rank
+    if leaderboard_label and is_instance_valid(leaderboard_label):
+        _refresh_leaderboard()
+
+func _on_firebase_rank_failed(_message: String) -> void:
+    global_rank = 0
     if leaderboard_label and is_instance_valid(leaderboard_label):
         _refresh_leaderboard()
 
