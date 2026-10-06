@@ -1,3 +1,13 @@
+## Leaderboard
+
+- Local leaderboard with the 10 fastest completed race times
+- Stores race time, game mode, map and weather for each entry
+- Automatically adds a result after a completed race
+- Best time and total races are shown in the leaderboard screen
+- Coins and XP summary are shown with the leaderboard
+- Leaderboard data is saved locally with the persistent save system
+- Works offline without an online account or external server
+
 ## Settings
 
 - Graphics quality: LOW, MEDIUM and HIGH
