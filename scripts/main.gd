@@ -37,6 +37,10 @@ var current_checkpoint := 0
 var total_checkpoints := 3
 var lap := 1
 var total_laps := 1
+var coins := 0
+var xp := 0
+var reward_label: Label
+var coins_label: Label
 var race_start_z := 15.0
 var finish_z := -66.0
 
@@ -53,6 +57,7 @@ func _ready() -> void:
     _build_ai_opponents()
     _build_game_over_ui()
     _build_mode_select()
+    _build_rewards_hud()
 
     var car := get_node_or_null("PlayerCar")
     if car:
@@ -1139,6 +1144,7 @@ func _on_finish_body_entered(body: Node3D) -> void:
         return
 
     race_finished = true
+    _grant_race_rewards()
     var car := get_node_or_null("PlayerCar")
     if car and car.has_method("set_finish_cinematic"):
         car.set_finish_cinematic(true)
@@ -1172,7 +1178,7 @@ func _show_finish_overlay() -> void:
     message.text = "MODE: %s" % mode_name
 
     result_time_label = Label.new()
-    result_time_label.text = "TIME  " + _format_race_time(race_elapsed) + "\nPOSITION  " + str(_get_player_position_rank()) + " / " + str(ai_opponents.size() + 1)
+    result_time_label.text = "TIME  " + _format_race_time(race_elapsed) + "\nPOSITION  " + str(_get_player_position_rank()) + " / " + str(ai_opponents.size() + 1) + "\nREWARD  +" + str(_calculate_race_reward()[0]) + " COINS   +" + str(_calculate_race_reward()[1]) + " XP"
     result_time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     result_time_label.set_anchors_preset(Control.PRESET_CENTER)
     result_time_label.position = Vector2(-320.0, 5.0)
@@ -1195,6 +1201,44 @@ func _show_finish_overlay() -> void:
     finish_button.add_theme_font_size_override("font_size", 28)
     finish_button.pressed.connect(_restart_game)
     finish_overlay.add_child(finish_button)
+
+func _build_rewards_hud() -> void:
+    var canvas := CanvasLayer.new()
+    canvas.name = "RewardsHUD"
+    canvas.layer = 8
+    add_child(canvas)
+
+    coins_label = Label.new()
+    coins_label.text = "COINS 0   XP 0"
+    coins_label.position = Vector2(28.0, 118.0)
+    coins_label.size = Vector2(330.0, 38.0)
+    coins_label.add_theme_font_size_override("font_size", 22)
+    canvas.add_child(coins_label)
+
+func _update_rewards_hud() -> void:
+    if is_instance_valid(coins_label):
+        coins_label.text = "COINS %d   XP %d" % [coins, xp]
+
+func _calculate_race_reward() -> Array[int]:
+    var base_coins := 50
+    var base_xp := 100
+    if selected_mode == "time_trial":
+        base_coins = 75
+        base_xp = 125
+    elif selected_mode == "career":
+        base_coins = 100
+        base_xp = 180
+    var rank_bonus := 0
+    if selected_mode != "time_trial":
+        var rank := _get_player_position_rank()
+        rank_bonus = max(0, (ai_opponents.size() + 1 - rank) * 25)
+    return [base_coins + rank_bonus, base_xp + rank_bonus * 2]
+
+func _grant_race_rewards() -> void:
+    var reward := _calculate_race_reward()
+    coins += reward[0]
+    xp += reward[1]
+    _update_rewards_hud()
 
 func _build_health_hud() -> void:
     var canvas := CanvasLayer.new()
