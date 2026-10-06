@@ -46,29 +46,49 @@ func _build_environment() -> void:
     add_child(light)
 
 func _build_road() -> void:
-    var road_material := StandardMaterial3D.new()
-    road_material.albedo_color = Color(0.12, 0.12, 0.14)
-    road_material.roughness = 0.92
+    var road_material := _make_material(Color(0.075, 0.08, 0.095), 0.0, 0.9)
+    var curb_material := _make_material(Color(0.75, 0.78, 0.82), 0.15, 0.7)
+    var red_curb_material := _make_material(Color(0.72, 0.08, 0.05), 0.05, 0.72)
+    var marking_material := _make_emission_material(Color(0.95, 0.95, 0.82), 0.25)
 
     var segment_data := [
         {"position": Vector3(0.0, -0.1, 10.0), "size": Vector3(12.0, 0.2, 20.0), "rotation": 0.0},
         {"position": Vector3(0.0, -0.1, -8.0), "size": Vector3(12.0, 0.2, 18.0), "rotation": 0.0},
-        {"position": Vector3(4.0, 0.1, -25.0), "size": Vector3(12.0, 0.2, 18.0), "rotation": -8.0},
-        {"position": Vector3(9.0, 0.45, -42.0), "size": Vector3(12.0, 0.2, 18.0), "rotation": -18.0},
-        {"position": Vector3(10.0, 0.85, -59.0), "size": Vector3(12.0, 0.2, 18.0), "rotation": -2.0}
+        {"position": Vector3(2.0, 0.0, -24.0), "size": Vector3(12.0, 0.2, 16.0), "rotation": -8.0},
+        {"position": Vector3(6.0, 0.22, -39.0), "size": Vector3(12.0, 0.2, 15.0), "rotation": -18.0},
+        {"position": Vector3(9.0, 0.48, -52.0), "size": Vector3(12.0, 0.2, 13.0), "rotation": -10.0},
+        {"position": Vector3(10.0, 0.78, -64.0), "size": Vector3(12.0, 0.2, 12.0), "rotation": 0.0}
     ]
 
     for data in segment_data:
-        _add_road_segment(data.position, data.size, data.rotation, road_material)
+        _add_road_segment(data.position, data.size, data.rotation, road_material, curb_material, red_curb_material, marking_material)
 
-    _add_ramp(Vector3(-2.0, 0.0, -16.0), 0.0)
-    _add_ramp(Vector3(6.0, 0.25, -51.0), -18.0)
+    _add_ramp(Vector3(-1.5, 0.0, -16.5), 0.0)
+    _add_ramp(Vector3(6.8, 0.34, -47.5), -18.0)
+
+    _add_guardrail(Vector3(-6.35, 0.1, -20.0), 0.0, 14.0)
+    _add_guardrail(Vector3(10.7, 0.65, -40.0), -18.0, 12.0)
+    _add_guardrail(Vector3(15.0, 0.85, -53.0), -10.0, 9.0)
 
     _add_barrier(Vector3(-4.0, 0.65, -5.0), 0.0)
-    _add_barrier(Vector3(4.0, 0.65, -29.0), 0.0)
-    _add_barrier(Vector3(11.0, 1.35, -45.0), -18.0)
-    _add_barrel(Vector3(1.8, 0.7, -35.0))
-    _add_barrel(Vector3(7.0, 1.0, -55.0))
+    _add_barrier(Vector3(3.5, 0.62, -30.0), -8.0)
+    _add_barrier(Vector3(11.0, 1.15, -43.0), -18.0)
+    _add_barrel(Vector3(1.8, 0.7, -34.0))
+    _add_barrel(Vector3(8.0, 1.0, -57.0))
+
+func _make_material(color: Color, metallic: float, roughness: float) -> StandardMaterial3D:
+    var material := StandardMaterial3D.new()
+    material.albedo_color = color
+    material.metallic = metallic
+    material.roughness = roughness
+    return material
+
+func _make_emission_material(color: Color, energy: float) -> StandardMaterial3D:
+    var material := _make_material(color, 0.0, 0.5)
+    material.emission_enabled = true
+    material.emission = color
+    material.emission_energy_multiplier = energy
+    return material
 
 func _add_road_segment(position: Vector3, size: Vector3, rotation_y: float, material: StandardMaterial3D) -> void:
     var road_body := StaticBody3D.new()
