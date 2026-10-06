@@ -259,7 +259,7 @@ func _build_audio() -> void:
 
     tire_player = AudioStreamPlayer3D.new()
     tire_player.name = "TireRoadAudio"
-    tire_player.stream = _create_noise(0.65)
+    tire_player.stream = _create_looped_noise(0.65)
     tire_player.volume_db = -34.0
     tire_player.max_distance = 42.0
     add_child(tire_player)
@@ -267,7 +267,7 @@ func _build_audio() -> void:
 
     wind_player = AudioStreamPlayer3D.new()
     wind_player.name = "SpeedWindAudio"
-    wind_player.stream = _create_noise(0.9)
+    wind_player.stream = _create_looped_noise(0.9)
     wind_player.volume_db = -42.0
     wind_player.max_distance = 55.0
     add_child(wind_player)
@@ -313,6 +313,13 @@ func _create_tone(frequency: float, duration: float) -> AudioStreamWAV:
     stream.loop_begin = 0
     stream.loop_end = samples
     stream.data = data
+    return stream
+
+func _create_looped_noise(duration: float) -> AudioStreamWAV:
+    var stream := _create_noise(duration)
+    stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+    stream.loop_begin = 0
+    stream.loop_end = stream.data.size() / 2
     return stream
 
 func _create_noise(duration: float) -> AudioStreamWAV:
