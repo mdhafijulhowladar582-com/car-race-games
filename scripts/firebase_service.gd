@@ -21,6 +21,7 @@ var refresh_token := ""
 var user_id := ""
 var display_name := ""
 var last_submitted_time := 0.0
+var last_best_time := 0.0
 
 func _ready() -> void:
     http = HTTPRequest.new()
@@ -242,6 +243,70 @@ func _on_score_retry_read_completed(result: int, response_code: int, _headers: P
 
     last_best_time = current_time
     score_saved.emit()
+
+func load_global_rank(race_time: float) -> void:
+    if not is_authenticated() or user_id.is_empty():
+        rank_failed.emit("Global rank requires authentication.")
+        return
+    if race_time < 3.0 or race_time > 3600.0:
+        rank_failed.emit("Race time is outside the allowed range.")
+        return
+
+    var url := "https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents:runAggregationQuery" % FIREBASE_PROJECT_ID
+    var query := {
+        "structuredAggregationQuery": {
+            "structuredQuery": {
+                "from": [{"collectionId": "leaderboard"}],
+                "where": {
+                    "fieldFilter": {
+                        "field": {"fieldPath": "time"},
+                        "op": "LESS_THAN",
+                        "value": {"doubleValue": race_time}
+                    }
+                }
+            },
+            "aggregations": [
+                {"count": {}, "alias": "faster"}
+            ]
+        }
+    }
+    var headers := PackedStringArray([
+        "Content-Type: application/json",
+        "Authorization: Bearer " + id_token
+    ])
+    var request := HTTPRequest.new()
+    request.name = "FirebaseGlobalRank"
+    add_child(request)
+    request.request_completed.connect(_on_global_rank_completed.bind(request))
+    var error := request.request(url, headers, HTTPClient.METHOD_POST, JSON.stringify(query))
+    if error != OK:
+        request.queue_free()
+        rank_failed.emit("Could not start global rank request.")
+
+func _on_global_rank_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest) -> void:
+    request.queue_free()
+    if result != HTTPRequest.RESULT_SUCCESS:
+        rank_failed.emit("Global rank network request failed.")
+        return
+    if response_code < 200 or response_code >= 300:
+        rank_failed.emit("Global rank request failed (%d)." % response_code)
+        return
+
+    var response = JSON.parse_string(body.get_string_from_utf8())
+    if not (response is Array) or response.is_empty():
+        rank_failed.emit("Global rank returned no aggregate result.")
+        return
+
+    var first = response[0]
+    if not (first is Dictionary):
+        rank_failed.emit("Global rank returned invalid data.")
+        return
+    var result_data: Dictionary = first.get("result", {})
+    var aggregate: Dictionary = result_data.get("aggregateFields", {})
+    var faster := 0
+    if aggregate.has("faster") and aggregate["faster"] is Dictionary:
+        faster = int(aggregate["faster"].get("integerValue", 0))
+    rank_loaded.emit(faster + 1)
 
 func load_public_leaderboard() -> void:
     if not http:
