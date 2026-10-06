@@ -69,6 +69,8 @@ var master_volume := 1.0
 var steering_sensitivity := 1.0
 var vibration_enabled := true
 var settings_path := "user://car_race_settings.json"
+var target_fps := 60
+var battery_saver := false
 var leaderboard_overlay: ColorRect
 var leaderboard_label: Label
 var leaderboard_entries: Array = []
@@ -1217,7 +1219,8 @@ func _open_settings() -> void:
     _add_settings_button("VOLUME: " + str(roundi(master_volume * 100.0)) + "%", Vector2(390.0, 280.0), "_cycle_volume")
     _add_settings_button("STEERING: " + str(snapped(steering_sensitivity, 0.1)), Vector2(390.0, 340.0), "_cycle_sensitivity")
     _add_settings_button("VIBRATION: " + ("ON" if vibration_enabled else "OFF"), Vector2(390.0, 400.0), "_toggle_vibration")
-    _add_settings_button("BACK", Vector2(390.0, 475.0), "_close_settings")
+    _add_settings_button("FPS: " + str(target_fps) + (" SAVER" if battery_saver else ""), Vector2(390.0, 460.0), "_cycle_performance")
+    _add_settings_button("BACK", Vector2(390.0, 530.0), "_close_settings")
     _refresh_settings_label()
 
 func _add_settings_button(text_value: String, button_position: Vector2, method_name: String) -> void:
@@ -1259,16 +1262,26 @@ func _toggle_vibration() -> void:
     _save_settings()
     _open_settings()
 
+func _cycle_performance() -> void:
+    battery_saver = not battery_saver
+    target_fps = 45 if battery_saver else 60
+    Engine.max_fps = target_fps
+    _apply_graphics_settings()
+    _save_settings()
+    _open_settings()
+
 func _close_settings() -> void:
     if is_instance_valid(settings_overlay):
         settings_overlay.queue_free()
         settings_overlay = null
 
 func _apply_graphics_settings() -> void:
-    get_tree().root.scaling_3d_scale = 0.75 if graphics_quality == "LOW" else (1.0 if graphics_quality == "HIGH" else 0.85)
+    get_tree().root.scaling_3d_scale = 0.65 if graphics_quality == "LOW" else (1.0 if graphics_quality == "HIGH" else 0.82)
+    if battery_saver:
+        get_tree().root.scaling_3d_scale = min(get_tree().root.scaling_3d_scale, 0.72)
 
 func _save_settings() -> void:
-    var data := {"graphics_quality": graphics_quality, "master_volume": master_volume, "steering_sensitivity": steering_sensitivity, "vibration_enabled": vibration_enabled}
+    var data := {"graphics_quality": graphics_quality, "master_volume": master_volume, "steering_sensitivity": steering_sensitivity, "vibration_enabled": vibration_enabled, "target_fps": target_fps, "battery_saver": battery_saver}
     var file := FileAccess.open(settings_path, FileAccess.WRITE)
     if file:
         file.store_string(JSON.stringify(data))
@@ -1283,7 +1296,10 @@ func _load_settings() -> void:
                 master_volume = float(parsed.get("master_volume", 1.0))
                 steering_sensitivity = float(parsed.get("steering_sensitivity", 1.0))
                 vibration_enabled = bool(parsed.get("vibration_enabled", true))
+                target_fps = 45 if int(parsed.get("target_fps", 60)) <= 45 else 60
+                battery_saver = bool(parsed.get("battery_saver", false))
     _apply_graphics_settings()
+    Engine.max_fps = target_fps
     AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Master"), linear_to_db(master_volume) if master_volume > 0.0 else -80.0)
 
 func _build_weather_select() -> void:
