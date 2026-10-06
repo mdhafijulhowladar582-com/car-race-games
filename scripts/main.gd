@@ -628,6 +628,7 @@ func _build_environment() -> void:
     environment.volumetric_fog_density = 0.008
     environment.volumetric_fog_albedo = Color(0.55, 0.62, 0.7)
     world.environment = environment
+    fog_environment = environment
     add_child(world)
 
     var sun := DirectionalLight3D.new()
@@ -672,7 +673,7 @@ func _apply_professional_lighting(weather: String) -> void:
         sun_light.rotation_degrees = Vector3(-18.0, 35.0, 0.0)
         if sky_fill_light:
             sky_fill_light.light_energy = 0.18
-    elif weather == "RAIN + FOG":
+    elif weather == "RAIN":
         sun_light.light_color = Color(0.72, 0.78, 0.86)
         sun_light.light_energy = 0.82 * lighting_tuning
         sun_light.rotation_degrees = Vector3(-38.0, -28.0, 0.0)
