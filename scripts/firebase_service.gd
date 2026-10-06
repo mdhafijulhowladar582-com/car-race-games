@@ -22,6 +22,8 @@ var user_id := ""
 var display_name := ""
 var last_submitted_time := 0.0
 var last_best_time := 0.0
+const MAX_SCORE_RETRIES := 2
+var _score_retries := 0
 
 func _ready() -> void:
     http = HTTPRequest.new()
@@ -107,6 +109,7 @@ func save_best_score(race_time: float, map_name: String, car_name: String) -> vo
         return
 
     last_submitted_time = race_time
+    _score_retries = 0
     var url := FIRESTORE_BASE_URL + LEADERBOARD_PATH + "/" + user_id.uri_encode()
     var headers := PackedStringArray([
         "Accept: application/json",
@@ -194,7 +197,11 @@ func _on_score_commit_completed(result: int, response_code: int, _headers: Packe
 
     var data = JSON.parse_string(body.get_string_from_utf8())
     if response_code == 409 or response_code == 400:
-        _retry_score_after_conflict(race_time, map_name, car_name)
+        if _score_retries < MAX_SCORE_RETRIES:
+            _score_retries += 1
+            _retry_score_after_conflict(race_time, map_name, car_name)
+        else:
+            score_failed.emit("Firebase score upload failed after retries (%d)." % response_code)
         return
 
     var message := "Firebase score upload failed (%d)." % response_code
