@@ -15,10 +15,18 @@ var waypoint_index := 0
 var waypoints: Array[Vector3] = []
 var race_active := false
 var finished := false
+var finish_time := 0.0
 
 func setup(route: Array[Vector3], start_index: int = 0) -> void:
     waypoints = route
-    waypoint_index = start_index
+    waypoint_index = clampi(start_index, 0, max(route.size() - 1, 0))
+    speed = 0.0
+    target_speed = max_speed
+    race_time = 0.0
+    race_active = false
+    finished = false
+    finish_time = 0.0
+    _clear_car_visuals()
     _build_car()
 
 func start_race() -> void:
@@ -28,12 +36,21 @@ func start_race() -> void:
 func _physics_process(delta: float) -> void:
     if not race_active or finished or waypoints.is_empty():
         velocity = Vector3.ZERO
+        speed = move_toward(speed, 0.0, acceleration * 1.8 * delta)
         return
     var target := waypoints[waypoint_index]
     var offset := target - global_position
     offset.y = 0.0
     if offset.length() < waypoint_reach:
-        waypoint_index = (waypoint_index + 1) % waypoints.size()
+        if waypoint_index >= waypoints.size() - 1:
+            finished = true
+            race_active = false
+            finish_time = race_time
+            velocity = Vector3.ZERO
+            speed = 0.0
+            global_position = Vector3(waypoints.back().x, global_position.y, waypoints.back().z)
+            return
+        waypoint_index += 1
         target = waypoints[waypoint_index]
         offset = target - global_position
     race_time += delta
@@ -59,6 +76,11 @@ func _physics_process(delta: float) -> void:
     velocity.z = (desired_velocity + lateral_velocity).z
     velocity.y = -0.2
     move_and_slide()
+
+func _clear_car_visuals() -> void:
+    for child in get_children():
+        if child is CollisionShape3D or child is MeshInstance3D or child is Label3D:
+            child.queue_free()
 
 func _build_car() -> void:
     var collision := CollisionShape3D.new()
