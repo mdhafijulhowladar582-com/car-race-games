@@ -44,14 +44,15 @@ Godot 4.x 3D car racing game for Android and PC.
 
 ## Track
 
-- Multiple connected 3D road segments
-- Curved road sections
-- Raised road sections
-- Driveable ramps
-- Ramp warning stripes
-- Collision barriers
-- Barrel obstacles
-- Physical collision on road and obstacles
+- Multi-section connected racing route with progressive bends
+- Raised road sections for elevation changes
+- Alternating curb blocks for a professional race-track edge look
+- Center lane markings across road sections
+- Metallic roadside guardrails with physical collision
+- Driveable ramps with warning stripes
+- Tunnel structure with interior lights
+- Collision barriers and barrel obstacles
+- Physical collision on road and track obstacles
 
 ## Car Visual
 
