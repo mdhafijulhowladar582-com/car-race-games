@@ -15,6 +15,10 @@ var timer_label: Label
 var position_label: Label
 var checkpoint_label: Label
 var result_time_label: Label
+var mode_overlay: ColorRect
+var mode_label: Label
+var selected_mode := "quick_race"
+var mode_name := "QUICK RACE"
 var ai_opponents: Array[Node3D] = []
 var ai_count := 3
 var ambience_player: AudioStreamPlayer3D
@@ -22,6 +26,7 @@ var race_finished := false
 var race_started := false
 var race_elapsed := 0.0
 var countdown_time := 3.0
+var career_lap_complete := false
 var current_checkpoint := 0
 var total_checkpoints := 3
 var lap := 1
@@ -41,7 +46,7 @@ func _ready() -> void:
     _build_race_system()
     _build_ai_opponents()
     _build_game_over_ui()
-    _start_race_countdown()
+    _build_mode_select()
 
     var car := get_node_or_null("PlayerCar")
     if car:
@@ -690,6 +695,89 @@ func _add_barrel(position: Vector3) -> void:
     collision.shape = shape
     obstacle.add_child(collision)
 
+func _build_mode_select() -> void:
+    var canvas := CanvasLayer.new()
+    canvas.name = "ModeSelectUI"
+    canvas.layer = 40
+    add_child(canvas)
+
+    mode_overlay = ColorRect.new()
+    mode_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    mode_overlay.color = Color(0.015, 0.02, 0.035, 0.94)
+    mode_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+    canvas.add_child(mode_overlay)
+
+    var title := Label.new()
+    title.text = "🏆 SELECT GAME MODE"
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title.set_anchors_preset(Control.PRESET_CENTER)
+    title.position = Vector2(-360.0, -250.0)
+    title.size = Vector2(720.0, 80.0)
+    title.add_theme_font_size_override("font_size", 46)
+    mode_overlay.add_child(title)
+
+    mode_label = Label.new()
+    mode_label.text = "QUICK RACE\nRace against 3 AI opponents"
+    mode_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    mode_label.set_anchors_preset(Control.PRESET_CENTER)
+    mode_label.position = Vector2(-360.0, -150.0)
+    mode_label.size = Vector2(720.0, 90.0)
+    mode_label.add_theme_font_size_override("font_size", 24)
+    mode_overlay.add_child(mode_label)
+
+    _add_mode_button(mode_overlay, "QUICK RACE", Vector2(-310.0, -45.0), "quick_race")
+    _add_mode_button(mode_overlay, "TIME TRIAL", Vector2(-105.0, -45.0), "time_trial")
+    _add_mode_button(mode_overlay, "CAREER", Vector2(100.0, -45.0), "career")
+
+    var start := Button.new()
+    start.text = "START RACE"
+    start.set_anchors_preset(Control.PRESET_CENTER)
+    start.position = Vector2(-170.0, 75.0)
+    start.size = Vector2(340.0, 78.0)
+    start.focus_mode = Control.FOCUS_NONE
+    start.add_theme_font_size_override("font_size", 28)
+    start.pressed.connect(_start_selected_mode)
+    mode_overlay.add_child(start)
+
+func _add_mode_button(parent: Control, text_value: String, button_position: Vector2, mode_value: String) -> void:
+    var button := Button.new()
+    button.text = text_value
+    button.set_anchors_preset(Control.PRESET_CENTER)
+    button.position = button_position
+    button.size = Vector2(190.0, 72.0)
+    button.focus_mode = Control.FOCUS_NONE
+    button.add_theme_font_size_override("font_size", 20)
+    button.pressed.connect(_select_mode.bind(mode_value))
+    parent.add_child(button)
+
+func _select_mode(mode_value: String) -> void:
+    selected_mode = mode_value
+    if mode_value == "time_trial":
+        mode_name = "TIME TRIAL"
+        mode_label.text = "TIME TRIAL\nRace alone and beat your best time"
+    elif mode_value == "career":
+        mode_name = "CAREER"
+        mode_label.text = "CAREER\nComplete a 3-lap championship race"
+    else:
+        mode_name = "QUICK RACE"
+        mode_label.text = "QUICK RACE\nRace against 3 AI opponents"
+
+func _start_selected_mode() -> void:
+    if is_instance_valid(mode_overlay):
+        mode_overlay.queue_free()
+    if selected_mode == "time_trial":
+        for ai in ai_opponents:
+            if is_instance_valid(ai):
+                ai.queue_free()
+        ai_opponents.clear()
+        total_laps = 1
+    elif selected_mode == "career":
+        total_laps = 3
+    else:
+        total_laps = 1
+    race_label.text = mode_name + " 0%"
+    _start_race_countdown()
+
 func _start_race_countdown() -> void:
     countdown_label = Label.new()
     countdown_label.name = "Countdown"
@@ -908,7 +996,7 @@ func _process(delta: float) -> void:
     if is_instance_valid(timer_label):
         timer_label.text = "TIME " + _format_race_time(race_elapsed)
     if is_instance_valid(position_label):
-        position_label.text = "POSITION %d / %d" % [_get_player_position_rank(), ai_opponents.size() + 1]
+        position_label.text = "POSITION %d / %d" % [_get_player_position_rank(), ai_opponents.size() + 1] if selected_mode != "time_trial" else "TIME TRIAL 1 / 1"
     var lap_label := get_node_or_null("RaceHUD/LapInfo") as Label
     if is_instance_valid(lap_label):
         lap_label.text = "LAP %d / %d" % [lap, total_laps]
@@ -937,6 +1025,19 @@ func _on_finish_body_entered(body: Node3D) -> void:
         if is_instance_valid(checkpoint_label):
             checkpoint_label.text = "PASS CHECKPOINTS FIRST"
         return
+
+    if selected_mode == "career" and lap < total_laps:
+        lap += 1
+        current_checkpoint = 0
+        var car := get_node_or_null("PlayerCar")
+        if car:
+            car.global_position = Vector3(0.0, 1.0, race_start_z)
+            car.velocity = Vector3.ZERO
+            car.rotation_degrees = Vector3.ZERO
+        if is_instance_valid(checkpoint_label):
+            checkpoint_label.text = "LAP %d / %d" % [lap, total_laps]
+        return
+
     race_finished = true
     var car := get_node_or_null("PlayerCar")
     if car and car.has_method("set_finish_cinematic"):
@@ -968,10 +1069,10 @@ func _show_finish_overlay() -> void:
     finish_overlay.add_child(title)
 
     var message := Label.new()
-    message.text = "You reached the finish line!"
+    message.text = "MODE: %s" % mode_name
 
     result_time_label = Label.new()
-    result_time_label.text = "TIME  " + _format_race_time(race_elapsed)
+    result_time_label.text = "TIME  " + _format_race_time(race_elapsed) + "\nPOSITION  " + str(_get_player_position_rank()) + " / " + str(ai_opponents.size() + 1)
     result_time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     result_time_label.set_anchors_preset(Control.PRESET_CENTER)
     result_time_label.position = Vector2(-320.0, 5.0)
