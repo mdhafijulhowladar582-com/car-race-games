@@ -2076,11 +2076,14 @@ func _save_progress() -> void:
         "career_level": career_level,
         "career_wins": career_wins,
         "career_races": career_races,
-        "career_stars": career_stars
+        "career_stars": career_stars,
+        "save_version": 2
     }
+    var json_text := JSON.stringify(data)
     var file := FileAccess.open(save_path, FileAccess.WRITE)
     if file:
-        file.store_string(JSON.stringify(data))
+        file.store_string(json_text)
+        file.close()
 
 func _load_progress() -> void:
     if not FileAccess.file_exists(save_path):
@@ -2094,11 +2097,21 @@ func _load_progress() -> void:
     coins = int(parsed.get("coins", 0))
     xp = int(parsed.get("xp", 0))
     selected_mode = str(parsed.get("selected_mode", "quick_race"))
+    if selected_mode not in ["quick_race", "career", "time_trial"]:
+        selected_mode = "quick_race"
     selected_car = str(parsed.get("selected_car", "SPORTS"))
+    if selected_car not in ["SPORTS", "MUSCLE", "GT", "SUPERCAR", "HYPER", "RALLY"]:
+        selected_car = "SPORTS"
     selected_wheels = str(parsed.get("selected_wheels", "SPORT"))
-    upgrade_level = int(parsed.get("upgrade_level", 0))
+    if selected_wheels not in ["SPORT", "BLACK", "GOLD"]:
+        selected_wheels = "SPORT"
+    upgrade_level = clampi(int(parsed.get("upgrade_level", 0)), 0, 3)
     selected_weather = str(parsed.get("selected_weather", "DAY"))
+    if selected_weather not in ["DAY", "NIGHT", "RAIN"]:
+        selected_weather = "DAY"
     selected_map = str(parsed.get("selected_map", "CITY"))
+    if selected_map not in ["CITY", "HIGHWAY", "DESERT"]:
+        selected_map = "CITY"
     total_races = int(parsed.get("total_races", 0))
     best_time = float(parsed.get("best_time", 0.0))
     achievements = Array(parsed.get("achievements", []))
@@ -2117,7 +2130,20 @@ func _reset_saved_progress() -> void:
     xp = 0
     total_races = 0
     best_time = 0.0
+    selected_mode = "quick_race"
+    selected_car = "SPORTS"
+    selected_color = Color(0.82, 0.025, 0.02)
+    selected_wheels = "SPORT"
+    upgrade_level = 0
+    selected_weather = "DAY"
+    selected_map = "CITY"
     achievements.clear()
+    leaderboard_entries.clear()
+    career_level = 1
+    career_wins = 0
+    career_races = 0
+    career_stars = 0
+    career_reward_multiplier = 1.0
     _save_progress()
     _update_rewards_hud()
 
