@@ -250,155 +250,191 @@ func _build_car() -> void:
 
     _add_body(car_root)
     _add_cabin(car_root)
-    _add_bumpers(car_root)
+    _add_details(car_root)
     _add_lights(car_root)
     _add_spoiler(car_root)
-    _add_wheel(Vector3(-1.0, -0.45, -1.25))
-    _add_wheel(Vector3(1.0, -0.45, -1.25))
-    _add_wheel(Vector3(-1.0, -0.45, 1.25))
-    _add_wheel(Vector3(1.0, -0.45, 1.25))
+    _add_wheels()
 
 func _add_body(parent: Node3D) -> void:
-    var body_mesh := MeshInstance3D.new()
+    var body := MeshInstance3D.new()
     var mesh := BoxMesh.new()
-    mesh.size = Vector3(2.2, 0.78, 4.0)
-    body_mesh.mesh = mesh
-    body_mesh.position = Vector3(0.0, 0.02, 0.0)
-    body_mesh.scale = Vector3(1.0, 1.0, 1.0)
-    body_mesh.material_override = _material(Color(0.82, 0.04, 0.025), 0.25)
-    parent.add_child(body_mesh)
+    mesh.size = Vector3(2.2, 0.72, 4.0)
+    body.mesh = mesh
+    body.material_override = _material(Color(0.82, 0.025, 0.02), 0.55, 0.2)
+    parent.add_child(body)
+
+    var lower_body := MeshInstance3D.new()
+    var lower_mesh := BoxMesh.new()
+    lower_mesh.size = Vector3(2.32, 0.34, 3.45)
+    lower_body.mesh = lower_mesh
+    lower_body.position = Vector3(0.0, -0.27, 0.05)
+    lower_body.material_override = _material(Color(0.035, 0.035, 0.045), 0.35, 0.3)
+    parent.add_child(lower_body)
 
     var hood := MeshInstance3D.new()
     var hood_mesh := BoxMesh.new()
-    hood_mesh.size = Vector3(1.9, 0.16, 1.35)
+    hood_mesh.size = Vector3(1.86, 0.14, 1.45)
     hood.mesh = hood_mesh
-    hood.position = Vector3(0.0, 0.49, -1.05)
-    hood.material_override = _material(Color(0.95, 0.06, 0.035), 0.2)
+    hood.position = Vector3(0.0, 0.43, -1.02)
+    hood.material_override = _material(Color(0.92, 0.035, 0.025), 0.6, 0.18)
     parent.add_child(hood)
 
+    var front_lip := MeshInstance3D.new()
+    var lip_mesh := BoxMesh.new()
+    lip_mesh.size = Vector3(2.15, 0.16, 0.3)
+    front_lip.mesh = lip_mesh
+    front_lip.position = Vector3(0.0, -0.28, -2.02)
+    front_lip.material_override = _material(Color(0.015, 0.015, 0.02), 0.7, 0.2)
+    parent.add_child(front_lip)
+
 func _add_cabin(parent: Node3D) -> void:
-    var cabin := MeshInstance3D.new()
-    var cabin_mesh := BoxMesh.new()
-    cabin_mesh.size = Vector3(1.65, 0.72, 1.65)
-    cabin.mesh = cabin_mesh
-    cabin.position = Vector3(0.0, 0.63, 0.45)
-    cabin.rotation_degrees = Vector3(-3.0, 0.0, 0.0)
-    cabin.material_override = _material(Color(0.035, 0.05, 0.07), 0.05)
-    parent.add_child(cabin)
+    var roof := MeshInstance3D.new()
+    var roof_mesh := BoxMesh.new()
+    roof_mesh.size = Vector3(1.55, 0.52, 1.72)
+    roof.mesh = roof_mesh
+    roof.position = Vector3(0.0, 0.62, 0.42)
+    roof.rotation_degrees = Vector3(-2.0, 0.0, 0.0)
+    roof.material_override = _material(Color(0.018, 0.025, 0.032), 0.25, 0.08)
+    parent.add_child(roof)
 
-    var windshield := MeshInstance3D.new()
-    var windshield_mesh := BoxMesh.new()
-    windshield_mesh.size = Vector3(1.48, 0.42, 0.08)
-    windshield.mesh = windshield_mesh
-    windshield.position = Vector3(0.0, 0.72, -0.38)
-    windshield.rotation_degrees = Vector3(-18.0, 0.0, 0.0)
-    windshield.material_override = _material(Color(0.08, 0.18, 0.24), 0.05)
-    parent.add_child(windshield)
+    _add_window(parent, Vector3(0.0, 0.67, -0.42), Vector3(1.38, 0.38, 0.07), Vector3(-17.0, 0.0, 0.0))
+    _add_window(parent, Vector3(0.0, 0.67, 1.25), Vector3(1.38, 0.34, 0.07), Vector3(17.0, 0.0, 0.0))
+    _add_window(parent, Vector3(-0.79, 0.67, 0.43), Vector3(0.06, 0.38, 1.25), Vector3(0.0, 0.0, 0.0))
+    _add_window(parent, Vector3(0.79, 0.67, 0.43), Vector3(0.06, 0.38, 1.25), Vector3(0.0, 0.0, 0.0))
 
-    var rear_window := MeshInstance3D.new()
-    var rear_mesh := BoxMesh.new()
-    rear_mesh.size = Vector3(1.48, 0.38, 0.08)
-    rear_window.mesh = rear_mesh
-    rear_window.position = Vector3(0.0, 0.72, 1.28)
-    rear_window.rotation_degrees = Vector3(18.0, 0.0, 0.0)
-    rear_window.material_override = _material(Color(0.08, 0.18, 0.24), 0.05)
-    parent.add_child(rear_window)
+func _add_window(parent: Node3D, pos: Vector3, size: Vector3, rotation: Vector3) -> void:
+    var window := MeshInstance3D.new()
+    var mesh := BoxMesh.new()
+    mesh.size = size
+    window.mesh = mesh
+    window.position = pos
+    window.rotation_degrees = rotation
+    window.material_override = _material(Color(0.025, 0.09, 0.14), 0.45, 0.08)
+    parent.add_child(window)
 
-func _add_bumpers(parent: Node3D) -> void:
-    var front := MeshInstance3D.new()
-    var front_mesh := BoxMesh.new()
-    front_mesh.size = Vector3(2.05, 0.25, 0.25)
-    front.mesh = front_mesh
-    front.position = Vector3(0.0, -0.18, -2.02)
-    front.material_override = _material(Color(0.04, 0.04, 0.05), 0.15)
-    parent.add_child(front)
+func _add_details(parent: Node3D) -> void:
+    for x in [-0.72, 0.72]:
+        var skirt := MeshInstance3D.new()
+        var skirt_mesh := BoxMesh.new()
+        skirt_mesh.size = Vector3(0.16, 0.2, 2.65)
+        skirt.mesh = skirt_mesh
+        skirt.position = Vector3(x, -0.28, 0.12)
+        skirt.material_override = _material(Color(0.025, 0.025, 0.03), 0.6, 0.2)
+        parent.add_child(skirt)
 
-    var rear := MeshInstance3D.new()
-    var rear_mesh := BoxMesh.new()
-    rear_mesh.size = Vector3(2.05, 0.25, 0.25)
-    rear.mesh = rear_mesh
-    rear.position = Vector3(0.0, -0.18, 2.02)
-    rear.material_override = _material(Color(0.04, 0.04, 0.05), 0.15)
-    parent.add_child(rear)
+    var grille := MeshInstance3D.new()
+    var grille_mesh := BoxMesh.new()
+    grille_mesh.size = Vector3(1.05, 0.22, 0.08)
+    grille.mesh = grille_mesh
+    grille.position = Vector3(0.0, -0.05, -2.04)
+    grille.material_override = _material(Color(0.008, 0.008, 0.01), 0.8, 0.2)
+    parent.add_child(grille)
+
+    for x in [-0.72, 0.72]:
+        var mirror := MeshInstance3D.new()
+        var mirror_mesh := SphereMesh.new()
+        mirror_mesh.radius = 0.14
+        mirror_mesh.height = 0.2
+        mirror.mesh = mirror_mesh
+        mirror.position = Vector3(x * 1.12, 0.62, -0.35)
+        mirror.scale = Vector3(0.75, 0.55, 1.15)
+        mirror.material_override = _material(Color(0.03, 0.035, 0.04), 0.65, 0.15)
+        parent.add_child(mirror)
+
+    var diffuser := MeshInstance3D.new()
+    var diffuser_mesh := BoxMesh.new()
+    diffuser_mesh.size = Vector3(2.05, 0.2, 0.34)
+    diffuser.mesh = diffuser_mesh
+    diffuser.position = Vector3(0.0, -0.3, 1.98)
+    diffuser.material_override = _material(Color(0.01, 0.01, 0.015), 0.75, 0.18)
+    parent.add_child(diffuser)
 
 func _add_lights(parent: Node3D) -> void:
-    var left_headlight := MeshInstance3D.new()
-    var head_mesh := BoxMesh.new()
-    head_mesh.size = Vector3(0.48, 0.16, 0.12)
-    left_headlight.mesh = head_mesh
-    left_headlight.position = Vector3(-0.68, 0.2, -2.04)
-    left_headlight.material_override = _emission_material(Color(0.85, 0.95, 1.0))
-    parent.add_child(left_headlight)
+    for x in [-0.68, 0.68]:
+        var headlight := MeshInstance3D.new()
+        var mesh := BoxMesh.new()
+        mesh.size = Vector3(0.52, 0.13, 0.12)
+        headlight.mesh = mesh
+        headlight.position = Vector3(x, 0.22, -2.05)
+        headlight.material_override = _emission_material(Color(0.82, 0.94, 1.0), 5.0)
+        parent.add_child(headlight)
 
-    var right_headlight := left_headlight.duplicate()
-    right_headlight.position.x = 0.68
-    parent.add_child(right_headlight)
-
-    var left_tail := MeshInstance3D.new()
-    var tail_mesh := BoxMesh.new()
-    tail_mesh.size = Vector3(0.5, 0.15, 0.12)
-    left_tail.mesh = tail_mesh
-    left_tail.position = Vector3(-0.68, 0.18, 2.04)
-    left_tail.material_override = _emission_material(Color(1.0, 0.015, 0.01))
-    parent.add_child(left_tail)
-
-    var right_tail := left_tail.duplicate()
-    right_tail.position.x = 0.68
-    parent.add_child(right_tail)
+        var tail := MeshInstance3D.new()
+        var tail_mesh := BoxMesh.new()
+        tail_mesh.size = Vector3(0.58, 0.14, 0.12)
+        tail.mesh = tail_mesh
+        tail.position = Vector3(x, 0.18, 2.05)
+        tail.material_override = _emission_material(Color(1.0, 0.01, 0.005), 3.0)
+        parent.add_child(tail)
 
 func _add_spoiler(parent: Node3D) -> void:
-    var supports := MeshInstance3D.new()
-    var support_mesh := BoxMesh.new()
-    support_mesh.size = Vector3(1.35, 0.55, 0.12)
-    supports.mesh = support_mesh
-    supports.position = Vector3(0.0, 0.62, 1.72)
-    supports.material_override = _material(Color(0.03, 0.03, 0.035), 0.1)
-    parent.add_child(supports)
+    for x in [-0.52, 0.52]:
+        var support := MeshInstance3D.new()
+        var mesh := BoxMesh.new()
+        mesh.size = Vector3(0.12, 0.58, 0.14)
+        support.mesh = mesh
+        support.position = Vector3(x, 0.68, 1.68)
+        support.material_override = _material(Color(0.02, 0.02, 0.025), 0.7, 0.16)
+        parent.add_child(support)
 
     var wing := MeshInstance3D.new()
     var wing_mesh := BoxMesh.new()
-    wing_mesh.size = Vector3(2.0, 0.14, 0.42)
+    wing_mesh.size = Vector3(2.05, 0.13, 0.4)
     wing.mesh = wing_mesh
-    wing.position = Vector3(0.0, 0.9, 1.72)
-    wing.rotation_degrees = Vector3(-6.0, 0.0, 0.0)
-    wing.material_override = _material(Color(0.025, 0.025, 0.03), 0.1)
+    wing.position = Vector3(0.0, 0.96, 1.68)
+    wing.rotation_degrees = Vector3(-7.0, 0.0, 0.0)
+    wing.material_override = _material(Color(0.012, 0.012, 0.018), 0.75, 0.14)
     parent.add_child(wing)
+
+func _add_wheels() -> void:
+    for pos in [Vector3(-1.02, -0.46, -1.28), Vector3(1.02, -0.46, -1.28), Vector3(-1.02, -0.46, 1.28), Vector3(1.02, -0.46, 1.28)]:
+        _add_wheel(pos)
 
 func _add_wheel(pos: Vector3) -> void:
     var wheel_root := Node3D.new()
     wheel_root.position = pos
     add_child(wheel_root)
 
-    var wheel := MeshInstance3D.new()
-    var mesh := CylinderMesh.new()
-    mesh.top_radius = 0.42
-    mesh.bottom_radius = 0.42
-    mesh.height = 0.28
-    wheel.mesh = mesh
-    wheel.rotation_degrees = Vector3(0, 0, 90)
-    wheel.material_override = _material(Color(0.015, 0.015, 0.018), 0.1)
-    wheel_root.add_child(wheel)
+    var tire := MeshInstance3D.new()
+    var tire_mesh := CylinderMesh.new()
+    tire_mesh.top_radius = 0.44
+    tire_mesh.bottom_radius = 0.44
+    tire_mesh.height = 0.30
+    tire.mesh = tire_mesh
+    tire.rotation_degrees = Vector3(0.0, 0.0, 90.0)
+    tire.material_override = _material(Color(0.008, 0.008, 0.01), 0.1, 0.42)
+    wheel_root.add_child(tire)
+
+    var rim := MeshInstance3D.new()
+    var rim_mesh := CylinderMesh.new()
+    rim_mesh.top_radius = 0.23
+    rim_mesh.bottom_radius = 0.23
+    rim_mesh.height = 0.32
+    rim.mesh = rim_mesh
+    rim.rotation_degrees = Vector3(0.0, 0.0, 90.0)
+    rim.material_override = _material(Color(0.42, 0.44, 0.48), 0.9, 0.18)
+    wheel_root.add_child(rim)
 
     var hub := MeshInstance3D.new()
     var hub_mesh := CylinderMesh.new()
-    hub_mesh.top_radius = 0.18
-    hub_mesh.bottom_radius = 0.18
-    hub_mesh.height = 0.3
+    hub_mesh.top_radius = 0.09
+    hub_mesh.bottom_radius = 0.09
+    hub_mesh.height = 0.34
     hub.mesh = hub_mesh
-    hub.rotation_degrees = Vector3(0, 0, 90)
-    hub.material_override = _material(Color(0.65, 0.67, 0.7), 0.35)
+    hub.rotation_degrees = Vector3(0.0, 0.0, 90.0)
+    hub.material_override = _material(Color(0.08, 0.08, 0.09), 0.75, 0.2)
     wheel_root.add_child(hub)
 
-func _material(color: Color, metallic: float) -> StandardMaterial3D:
+func _material(color: Color, metallic: float, roughness: float) -> StandardMaterial3D:
     var material := StandardMaterial3D.new()
     material.albedo_color = color
     material.metallic = metallic
-    material.roughness = 0.32
+    material.roughness = roughness
     return material
 
-func _emission_material(color: Color) -> StandardMaterial3D:
-    var material := _material(color, 0.1)
+func _emission_material(color: Color, energy: float) -> StandardMaterial3D:
+    var material := _material(color, 0.1, 0.12)
     material.emission_enabled = true
     material.emission = color
-    material.emission_energy_multiplier = 3.0
+    material.emission_energy_multiplier = energy
     return material
