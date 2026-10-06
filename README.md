@@ -32,6 +32,15 @@ Godot 4.x 3D car racing game for Android and PC.
 - Android APK/AAB export still requires a Godot installation with Android export templates and the Android SDK/JDK
 - Release builds additionally require Android signing configuration
 
+## Advanced Race System
+
+- 3-2-1-GO race countdown
+- Sequential checkpoint gates that must be completed before finishing
+- Live race timer with minute/second precision
+- Lap and position HUD
+- Finish-line validation and final race time result
+- Race progress and remaining distance HUD
+
 ## Camera System
 
 - Speed-based dynamic FOV for a stronger sense of acceleration
