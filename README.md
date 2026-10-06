@@ -32,6 +32,15 @@ Godot 4.x 3D car racing game for Android and PC.
 - Android APK/AAB export still requires a Godot installation with Android export templates and the Android SDK/JDK
 - Release builds additionally require Android signing configuration
 
+## Car Customization
+
+- Three selectable body colors: red, blue and green
+- Three wheel styles: sport, black and gold
+- Three performance upgrade levels available before a race
+- Upgrades increase top speed and acceleration for the selected car
+- Customization choices are applied to the player car when the race starts
+- Customization status is shown in the race setup screen
+
 ## Multiple Cars
 
 - Sports: balanced performance with 34 top speed, 18 acceleration and 2.2 handling
