@@ -1274,21 +1274,43 @@ func _apply_weather(weather_value: String) -> void:
         environment.background_color = Color(0.015, 0.025, 0.07)
         environment.ambient_light_color = Color(0.2, 0.25, 0.45)
         environment.ambient_light_energy = 0.42
-    elif weather_value == "RAIN":
-        environment.background_color = Color(0.06, 0.075, 0.1)
-        environment.ambient_light_color = Color(0.38, 0.42, 0.5)
-        environment.ambient_light_energy = 0.58
         environment.fog_enabled = true
-        environment.fog_light_color = Color(0.3, 0.34, 0.4)
-        environment.fog_density = 0.012
+        environment.fog_light_color = Color(0.08, 0.11, 0.2)
+        environment.fog_density = 0.004
+        _set_rain(false)
+    elif weather_value == "RAIN":
+        environment.background_color = Color(0.045, 0.06, 0.085)
+        environment.ambient_light_color = Color(0.32, 0.38, 0.5)
+        environment.ambient_light_energy = 0.52
+        environment.fog_enabled = true
+        environment.fog_light_color = Color(0.28, 0.32, 0.38)
+        environment.fog_density = 0.016
         _ensure_rain()
+        _set_rain(true)
+        _apply_wet_surface_response(true)
     else:
         environment.background_color = Color(0.08, 0.1, 0.14)
         environment.ambient_light_color = Color(0.55, 0.6, 0.7)
         environment.ambient_light_energy = 0.8
         environment.fog_enabled = false
-        if is_instance_valid(rain_particles):
-            rain_particles.emitting = false
+        _set_rain(false)
+        _apply_wet_surface_response(false)
+
+func _set_rain(enabled: bool) -> void:
+    if is_instance_valid(rain_particles):
+        rain_particles.emitting = enabled
+
+func _apply_wet_surface_response(wet: bool) -> void:
+    for child in get_children():
+        if child.name.begins_with("CurvedRoad"):
+            var road_mesh := child.get_node_or_null("RoadMesh") as MeshInstance3D
+            if road_mesh and road_mesh.material_override is StandardMaterial3D:
+                var material := road_mesh.material_override as StandardMaterial3D
+                material.roughness = 0.56 if wet else 0.84
+                material.metallic = 0.18 if wet else 0.05
+                material.emission_enabled = wet
+                material.emission = Color(0.02, 0.035, 0.055)
+                material.emission_energy_multiplier = 0.12 if wet else 0.0
 
 func _ensure_rain() -> void:
     if is_instance_valid(rain_particles):
