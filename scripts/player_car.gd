@@ -113,6 +113,18 @@ func configure_car(model_name: String) -> void:
         car_max_speed = 38.0
         car_acceleration = 16.0
         car_steering = 2.4
+    elif model_name == "SUPERCAR":
+        car_max_speed = 42.0
+        car_acceleration = 19.0
+        car_steering = 2.6
+    elif model_name == "HYPER":
+        car_max_speed = 46.0
+        car_acceleration = 17.5
+        car_steering = 2.8
+    elif model_name == "RALLY":
+        car_max_speed = 32.0
+        car_acceleration = 22.0
+        car_steering = 2.15
     else:
         car_max_speed = 34.0
         car_acceleration = 18.0
@@ -120,6 +132,7 @@ func configure_car(model_name: String) -> void:
     max_speed = car_max_speed
     acceleration = car_acceleration
     steering_response = car_steering
+    _apply_model_visual_profile()
 
 func _ready() -> void:
     health = max_health
@@ -693,6 +706,40 @@ func get_health_percent() -> float:
         return 0.0
     return health / max_health
 
+func _apply_model_visual_profile() -> void:
+    var body_root := get_node_or_null("CarVisual")
+    if not body_root:
+        return
+    body_root.scale = Vector3.ONE
+    var roof := body_root.get_node_or_null("Roof") as MeshInstance3D
+    var spoiler := body_root.get_node_or_null("SpoilerWing") as MeshInstance3D
+    if car_model == "MUSCLE":
+        body_root.scale = Vector3(1.08, 0.98, 1.04)
+        if roof:
+            roof.scale = Vector3(1.08, 0.92, 1.12)
+    elif car_model == "GT":
+        body_root.scale = Vector3(1.02, 0.94, 1.08)
+        if roof:
+            roof.scale = Vector3(0.98, 0.88, 1.05)
+    elif car_model == "SUPERCAR":
+        body_root.scale = Vector3(1.04, 0.88, 1.12)
+        if roof:
+            roof.scale = Vector3(0.92, 0.82, 1.0)
+        if spoiler:
+            spoiler.scale = Vector3(1.05, 1.0, 0.9)
+    elif car_model == "HYPER":
+        body_root.scale = Vector3(1.0, 0.84, 1.18)
+        if roof:
+            roof.scale = Vector3(0.88, 0.78, 0.96)
+        if spoiler:
+            spoiler.scale = Vector3(1.12, 1.08, 0.82)
+    elif car_model == "RALLY":
+        body_root.scale = Vector3(1.02, 1.08, 1.0)
+        if roof:
+            roof.scale = Vector3(1.05, 1.08, 1.02)
+        if spoiler:
+            spoiler.scale = Vector3(1.0, 1.18, 1.0)
+
 func _apply_car_style() -> void:
     var body_root := get_node_or_null("CarVisual")
     if not body_root:
@@ -771,6 +818,7 @@ func _add_cabin(parent: Node3D) -> void:
     roof.mesh = roof_mesh
     roof.position = Vector3(0.0, 0.62, 0.42)
     roof.rotation_degrees = Vector3(-2.0, 0.0, 0.0)
+    roof.name = "Roof"
     roof.material_override = _material(Color(0.018, 0.025, 0.032), 0.25, 0.08)
     parent.add_child(roof)
 
@@ -1007,6 +1055,7 @@ func _add_spoiler(parent: Node3D) -> void:
     var wing_mesh := BoxMesh.new()
     wing_mesh.size = Vector3(2.05, 0.13, 0.4)
     wing.mesh = wing_mesh
+    wing.name = "SpoilerWing"
     wing.position = Vector3(0.0, 0.96, 1.68)
     wing.rotation_degrees = Vector3(-7.0, 0.0, 0.0)
     wing.material_override = _material(Color(0.012, 0.012, 0.018), 0.75, 0.14)
