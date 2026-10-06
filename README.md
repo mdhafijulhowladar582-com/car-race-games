@@ -32,6 +32,15 @@ Godot 4.x 3D car racing game for Android and PC.
 - Android APK/AAB export still requires a Godot installation with Android export templates and the Android SDK/JDK
 - Release builds additionally require Android signing configuration
 
+## Game Modes
+
+- Quick Race: one-lap race against three AI opponents
+- Time Trial: solo one-lap run focused on beating the clock
+- Career: three-lap championship-style race against AI opponents
+- Mode selection screen appears before every race
+- Race HUD and finish results adapt to the selected mode
+- Career mode resets the track at each lap while preserving the race timer
+
 ## AI Opponents
 
 - Three computer-controlled opponent cars spawn on the starting grid
