@@ -2,50 +2,48 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function validScore() {
+      return request.auth != null
+        && request.auth.uid == request.resource.data.userId
+        && request.resource.data.time is number
+        && request.resource.data.time >= 3
+        && request.resource.data.time < 86400
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.map is string
+        && request.resource.data.map.size() <= 32
+        && request.resource.data.car is string
+        && request.resource.data.car.size() <= 32
+        && request.resource.data.timestamp is timestamp
+        && request.resource.data.timestamp == request.time
+        && request.resource.data.keys().hasOnly([
+          'userId',
+          'name',
+          'time',
+          'map',
+          'car',
+          'timestamp'
+        ]);
+    }
+
     match /leaderboard/{userId} {
       allow read: if true;
 
-      allow create: if request.auth != null
-        && request.auth.uid == userId
-        && request.resource.data.keys().hasOnly(['userId', 'name', 'time', 'map', 'car', 'timestamp'])
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.name is string
-        && request.resource.data.name.size() > 0
-        && request.resource.data.name.size() <= 80
-        && request.resource.data.time is number
-        && request.resource.data.time >= 3
-        && request.resource.data.time <= 3600
-        && request.resource.data.map is string
-        && request.resource.data.map.size() > 0
-        && request.resource.data.map.size() <= 32
-        && request.resource.data.car is string
-        && request.resource.data.car.size() > 0
-        && request.resource.data.car.size() <= 32
-        && request.resource.data.timestamp is timestamp
-        && request.resource.data.timestamp == request.time;
+      allow create: if validScore()
+        && userId == request.auth.uid;
 
-      allow update: if request.auth != null
-        && request.auth.uid == userId
-        && request.resource.data.keys().hasOnly(['userId', 'name', 'time', 'map', 'car', 'timestamp'])
+      allow update: if validScore()
+        && userId == request.auth.uid
+        && resource.data.userId == request.auth.uid
         && request.resource.data.userId == resource.data.userId
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.name is string
-        && request.resource.data.name.size() > 0
-        && request.resource.data.name.size() <= 80
-        && request.resource.data.time is number
-        && request.resource.data.time >= 3
-        && request.resource.data.time <= 3600
         && request.resource.data.time <= resource.data.time
-        && request.resource.data.map is string
-        && request.resource.data.map.size() > 0
-        && request.resource.data.map.size() <= 32
-        && request.resource.data.car is string
-        && request.resource.data.car.size() > 0
-        && request.resource.data.car.size() <= 32
-        && request.resource.data.timestamp is timestamp
-        && request.resource.data.timestamp == request.time;
+        && request.resource.data.timestamp > resource.data.timestamp;
 
       allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
