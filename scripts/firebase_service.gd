@@ -105,6 +105,7 @@ func save_best_score(race_time: float, map_name: String, car_name: String) -> vo
         score_failed.emit("Invalid race time.")
         return
 
+    last_submitted_time = race_time
     var url := FIRESTORE_BASE_URL + LEADERBOARD_PATH + "/" + user_id.uri_encode()
     var headers := PackedStringArray([
         "Accept: application/json",
@@ -126,116 +127,122 @@ func _on_score_read_completed(result: int, response_code: int, _headers: PackedS
         return
 
     var existing_time := INF
+    var update_time := ""
     if response_code >= 200 and response_code < 300:
         var data = JSON.parse_string(body.get_string_from_utf8())
         if data is Dictionary:
             var fields: Dictionary = data.get("fields", {})
             existing_time = _field_number(fields, "time", INF)
+            update_time = str(data.get("updateTime", ""))
     elif response_code != 404:
         score_failed.emit("Firebase score check failed (%d)." % response_code)
         return
 
     if race_time >= existing_time:
+        last_best_time = existing_time
         score_saved.emit()
         return
 
-    var url := FIRESTORE_BASE_URL + LEADERBOARD_PATH + "/" + user_id.uri_encode()
+    _commit_best_score(race_time, map_name, car_name, update_time)
+
+func _commit_best_score(race_time: float, map_name: String, car_name: String, update_time: String) -> void:
     var headers := PackedStringArray([
         "Content-Type: application/json",
         "Authorization: Bearer " + id_token
     ])
-    last_submitted_time = race_time
-    var payload := {
-        "writes": [{
-            "update": {
-                "name": "projects/%s/databases/(default)/documents/leaderboard/%s" % [FIREBASE_PROJECT_ID, user_id],
-                "fields": {
-                    "userId": {"stringValue": user_id},
-                    "name": {"stringValue": display_name if not display_name.is_empty() else "Player"},
-                    "time": {"doubleValue": race_time},
-                    "map": {"stringValue": map_name},
-                    "car": {"stringValue": car_name}
-                }
-            },
-            "updateTransforms": [{
-                "fieldPath": "timestamp",
-                "setToServerValue": "REQUEST_TIME"
-            }]
+    var write := {
+        "update": {
+            "name": "projects/%s/databases/(default)/documents/leaderboard/%s" % [FIREBASE_PROJECT_ID, user_id],
+            "fields": {
+                "userId": {"stringValue": user_id},
+                "name": {"stringValue": display_name if not display_name.is_empty() else "Player"},
+                "time": {"doubleValue": race_time},
+                "map": {"stringValue": map_name},
+                "car": {"stringValue": car_name}
+            }
+        },
+        "updateTransforms": [{
+            "fieldPath": "timestamp",
+            "setToServerValue": "REQUEST_TIME"
         }]
     }
-    var write_request := HTTPRequest.new()
-    write_request.name = "FirebaseScoreWrite"
-    add_child(write_request)
-    write_request.request_completed.connect(_on_score_write_completed.bind(write_request))
-    var commit_url := "https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents:commit" % FIREBASE_PROJECT_ID
-    var error := write_request.request(commit_url, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
-    if error != OK:
-        write_request.queue_free()
-        score_failed.emit("Could not start score upload.")
+    if update_time.is_empty():
+        write["currentDocument"] = {"exists": false}
+    else:
+        write["currentDocument"] = {"updateTime": update_time}
 
-func _on_score_write_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest) -> void:
+    var commit_url := "https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents:commit" % FIREBASE_PROJECT_ID
+    var request := HTTPRequest.new()
+    request.name = "FirebaseScoreCommit"
+    add_child(request)
+    request.request_completed.connect(_on_score_commit_completed.bind(request, race_time, map_name, car_name))
+    var error := request.request(commit_url, headers, HTTPClient.METHOD_POST, JSON.stringify({"writes": [write]}))
+    if error != OK:
+        request.queue_free()
+        score_failed.emit("Could not start atomic score upload.")
+
+func _on_score_commit_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest, race_time: float, map_name: String, car_name: String) -> void:
     request.queue_free()
     if result != HTTPRequest.RESULT_SUCCESS:
         score_failed.emit("Firebase score upload failed.")
         return
-    if response_code < 200 or response_code >= 300:
-        var data = JSON.parse_string(body.get_string_from_utf8())
-        var message := "Firebase score upload failed (%d)." % response_code
-        if data is Dictionary and data.has("error") and data["error"] is Dictionary and data["error"].has("message"):
-            message = str(data["error"]["message"])
-        score_failed.emit(message)
-        return
-    score_saved.emit()
-
-func load_global_rank(race_time: float) -> void:
-    if not is_authenticated() or user_id.is_empty():
-        rank_failed.emit("Guest mode has no global rank.")
-        return
-    if race_time <= 0.0:
-        rank_failed.emit("Invalid race time.")
+    if response_code >= 200 and response_code < 300:
+        last_best_time = race_time
+        score_saved.emit()
         return
 
-    var rank_http := HTTPRequest.new()
-    rank_http.name = "FirebaseRankQuery"
-    add_child(rank_http)
-    rank_http.request_completed.connect(_on_rank_query_completed.bind(rank_http))
-    var url := "https://firestore.googleapis.com/v1/projects/%s/databases/(default):runAggregationQuery" % FIREBASE_PROJECT_ID
-    var headers := PackedStringArray(["Content-Type: application/json", "Authorization: Bearer " + id_token])
-    var payload := {
-        "structuredAggregationQuery": {
-            "structuredQuery": {
-                "from": [{"collectionId": "leaderboard"}],
-                "where": {"fieldFilter": {"field": {"fieldPath": "time"}, "op": "LESS_THAN", "value": {"doubleValue": race_time}}}
-            },
-            "aggregations": [{"count": {}, "alias": "lowerScores"}]
-        }
-    }
-    var error := rank_http.request(url, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+    var data = JSON.parse_string(body.get_string_from_utf8())
+    if response_code == 409 or response_code == 400:
+        _retry_score_after_conflict(race_time, map_name, car_name)
+        return
+
+    var message := "Firebase score upload failed (%d)." % response_code
+    if data is Dictionary and data.has("error") and data["error"] is Dictionary and data["error"].has("message"):
+        message = str(data["error"]["message"])
+    score_failed.emit(message)
+
+func _retry_score_after_conflict(race_time: float, map_name: String, car_name: String) -> void:
+    var headers := PackedStringArray([
+        "Accept: application/json",
+        "Authorization: Bearer " + id_token
+    ])
+    var request := HTTPRequest.new()
+    request.name = "FirebaseScoreRetryRead"
+    add_child(request)
+    request.request_completed.connect(_on_score_retry_read_completed.bind(request, race_time, map_name, car_name))
+    var url := FIRESTORE_BASE_URL + LEADERBOARD_PATH + "/" + user_id.uri_encode()
+    var error := request.request(url, headers, HTTPClient.METHOD_GET)
     if error != OK:
-        rank_http.queue_free()
-        rank_failed.emit("Could not start global rank query.")
+        request.queue_free()
+        score_failed.emit("Could not retry atomic score upload.")
 
-func _on_rank_query_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest) -> void:
+func _on_score_retry_read_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest, race_time: float, map_name: String, car_name: String) -> void:
     request.queue_free()
     if result != HTTPRequest.RESULT_SUCCESS:
-        rank_failed.emit("Global rank network request failed.")
+        score_failed.emit("Firebase score retry check failed.")
         return
+
+    if response_code == 404:
+        _commit_best_score(race_time, map_name, car_name, "")
+        return
+    if response_code < 200 or response_code >= 300:
+        score_failed.emit("Firebase score retry check failed (%d)." % response_code)
+        return
+
     var data = JSON.parse_string(body.get_string_from_utf8())
-    if response_code < 200 or response_code >= 300 or not (data is Array):
-        rank_failed.emit("Global rank query failed (%d)." % response_code)
+    if not (data is Dictionary):
+        score_failed.emit("Firebase returned invalid score data.")
         return
-    var lower_scores := 0
-    for item in data:
-        if item is Dictionary and item.has("result"):
-            var result_data: Dictionary = item["result"]
-            var aggregate_fields: Dictionary = result_data.get("aggregateFields", {})
-            var lower_value: Dictionary = aggregate_fields.get("lowerScores", {})
-            if lower_value.has("integerValue"):
-                lower_scores = int(lower_value["integerValue"])
-            elif lower_value.has("doubleValue"):
-                lower_scores = int(float(lower_value["doubleValue"]))
-            break
-    rank_loaded.emit(lower_scores + 1)
+
+    var current_time := _field_number(data.get("fields", {}), "time", INF)
+    var update_time := str(data.get("updateTime", ""))
+    if race_time < current_time:
+        _commit_best_score(race_time, map_name, car_name, update_time)
+        return
+
+    last_best_time = current_time
+    score_saved.emit()
+
 func load_public_leaderboard() -> void:
     if not http:
         leaderboard_failed.emit("Firebase HTTP service is not ready.")
