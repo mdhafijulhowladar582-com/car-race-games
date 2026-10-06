@@ -538,42 +538,94 @@ func _add_premium_sign(position: Vector3, text_value: String, material: Standard
 func _build_professional_track() -> void:
     track_path = [
         Vector3(0.0, 0.0, 15.0),
-        Vector3(-1.0, 0.0, 5.0),
-        Vector3(0.0, 0.0, -5.0),
-        Vector3(2.0, 0.1, -15.0),
-        Vector3(5.0, 0.25, -25.0),
-        Vector3(8.0, 0.45, -35.0),
-        Vector3(10.0, 0.65, -45.0),
-        Vector3(11.0, 0.8, -55.0),
-        Vector3(10.0, 0.8, -66.0)
+        Vector3(-0.8, 0.0, 11.0),
+        Vector3(-2.2, 0.0, 7.0),
+        Vector3(-3.8, 0.02, 3.0),
+        Vector3(-4.8, 0.04, -1.0),
+        Vector3(-4.5, 0.06, -5.0),
+        Vector3(-2.8, 0.08, -9.0),
+        Vector3(0.0, 0.1, -13.0),
+        Vector3(3.5, 0.14, -17.0),
+        Vector3(6.5, 0.18, -21.0),
+        Vector3(8.2, 0.22, -25.0),
+        Vector3(8.8, 0.28, -29.0),
+        Vector3(8.0, 0.34, -33.0),
+        Vector3(5.5, 0.4, -37.0),
+        Vector3(2.0, 0.48, -40.0),
+        Vector3(-1.5, 0.56, -43.0),
+        Vector3(-3.8, 0.62, -47.0),
+        Vector3(-4.5, 0.68, -51.0),
+        Vector3(-3.2, 0.74, -55.0),
+        Vector3(0.0, 0.8, -59.0),
+        Vector3(4.0, 0.86, -63.0),
+        Vector3(7.2, 0.92, -67.0),
+        Vector3(8.5, 0.98, -71.0)
     ]
-    var edge_material := _make_material(Color(0.12, 0.14, 0.17), 0.45, 0.5)
     for i in range(track_path.size() - 1):
-        var a := track_path[i]
-        var b := track_path[i + 1]
-        var midpoint := (a + b) * 0.5
-        var direction := b - a
-        var length := direction.length()
-        var section := MeshInstance3D.new()
-        var mesh := BoxMesh.new()
-        mesh.size = Vector3(0.12, 0.16, length)
-        section.mesh = mesh
-        section.position = midpoint + Vector3(0.0, 0.18, 0.0)
-        section.rotation.y = atan2(direction.x, direction.z)
-        section.material_override = edge_material
-        add_child(section)
+        _add_curved_road_segment(track_path[i], track_path[i + 1], i)
+    _add_curve_apex_marker(track_path[5])
+    _add_curve_apex_marker(track_path[11])
+    _add_curve_apex_marker(track_path[17])
 
-        var marker := MeshInstance3D.new()
-        var marker_mesh := BoxMesh.new()
-        marker_mesh.size = Vector3(0.22, 0.035, 1.8)
-        marker.mesh = marker_mesh
-        marker.position = midpoint + Vector3(0.0, 0.18, 0.0)
-        marker.rotation.y = atan2(direction.x, direction.z)
-        marker.material_override = _make_emission_material(Color(0.95, 0.85, 0.25), 0.35)
-        add_child(marker)
+func _add_curved_road_segment(a: Vector3, b: Vector3, index: int) -> void:
+    var midpoint := (a + b) * 0.5
+    var direction := b - a
+    var length := maxf(direction.length() + 0.35, 1.0)
+    var angle := atan2(direction.x, direction.z)
+    var road := StaticBody3D.new()
+    road.name = "CurvedRoad%02d" % index
+    road.position = midpoint
+    road.rotation.y = angle
+    add_child(road)
 
-    _add_curve_apex_marker(Vector3(2.0, 0.25, -25.0))
-    _add_curve_apex_marker(Vector3(8.0, 0.5, -42.0))
+    var road_mesh := MeshInstance3D.new()
+    var road_box := BoxMesh.new()
+    road_box.size = Vector3(12.0, 0.24, length)
+    road_mesh.mesh = road_box
+    road_mesh.position.y = -0.08
+    road_mesh.material_override = _make_material(Color(0.055, 0.06, 0.075), 0.0, 0.82)
+    road.add_child(road_mesh)
+
+    var collision := CollisionShape3D.new()
+    var collision_shape := BoxShape3D.new()
+    collision_shape.size = Vector3(12.0, 0.24, length)
+    collision.shape = collision_shape
+    collision.position.y = -0.08
+    road.add_child(collision)
+
+    for side in [-1.0, 1.0]:
+        var curb := MeshInstance3D.new()
+        var curb_mesh := BoxMesh.new()
+        curb_mesh.size = Vector3(0.32, 0.14, length)
+        curb.mesh = curb_mesh
+        curb.position = Vector3(side * 6.16, 0.08, 0.0)
+        curb.material_override = _make_material(Color(0.72, 0.73, 0.75), 0.1, 0.68)
+        road.add_child(curb)
+
+        var red_curb := MeshInstance3D.new()
+        var red_mesh := BoxMesh.new()
+        red_mesh.size = Vector3(0.32, 0.15, minf(length * 0.5, 2.0))
+        red_curb.mesh = red_mesh
+        red_curb.position = Vector3(side * 6.16, 0.09, -length * 0.24)
+        red_curb.material_override = _make_material(Color(0.72, 0.035, 0.025), 0.05, 0.7)
+        road.add_child(red_curb)
+
+    var dash := MeshInstance3D.new()
+    var dash_mesh := BoxMesh.new()
+    dash_mesh.size = Vector3(0.16, 0.035, minf(length * 0.55, 1.8))
+    dash.mesh = dash_mesh
+    dash.position.y = 0.065
+    dash.material_override = _make_emission_material(Color(0.95, 0.92, 0.72), 0.2)
+    road.add_child(dash)
+
+    if index % 2 == 0:
+        var edge := MeshInstance3D.new()
+        var edge_mesh := BoxMesh.new()
+        edge_mesh.size = Vector3(0.08, 0.05, length)
+        edge.mesh = edge_mesh
+        edge.position = Vector3(-5.72, 0.09, 0.0)
+        edge.material_override = _make_emission_material(Color(0.95, 0.8, 0.18), 0.18)
+        road.add_child(edge)
 
 func _add_curve_apex_marker(position: Vector3) -> void:
     var marker := MeshInstance3D.new()
@@ -585,252 +637,6 @@ func _add_curve_apex_marker(position: Vector3) -> void:
     marker.position = position + Vector3(0.0, 0.45, 0.0)
     marker.material_override = _make_emission_material(Color(1.0, 0.28, 0.05), 0.7)
     add_child(marker)
-
-func _build_road() -> void:
-    var road_material := _make_material(Color(0.075, 0.08, 0.095), 0.0, 0.9)
-    var curb_material := _make_material(Color(0.75, 0.78, 0.82), 0.15, 0.7)
-    var red_curb_material := _make_material(Color(0.72, 0.08, 0.05), 0.05, 0.72)
-    var marking_material := _make_emission_material(Color(0.95, 0.95, 0.82), 0.25)
-
-    var segment_data := [
-        {"position": Vector3(0.0, -0.1, 10.0), "size": Vector3(12.0, 0.2, 20.0), "rotation": 0.0},
-        {"position": Vector3(0.0, -0.1, -8.0), "size": Vector3(12.0, 0.2, 18.0), "rotation": 0.0},
-        {"position": Vector3(2.0, 0.0, -24.0), "size": Vector3(12.0, 0.2, 16.0), "rotation": -8.0},
-        {"position": Vector3(6.0, 0.22, -39.0), "size": Vector3(12.0, 0.2, 15.0), "rotation": -18.0},
-        {"position": Vector3(9.0, 0.48, -52.0), "size": Vector3(12.0, 0.2, 13.0), "rotation": -10.0},
-        {"position": Vector3(10.0, 0.78, -64.0), "size": Vector3(12.0, 0.2, 12.0), "rotation": 0.0}
-    ]
-
-    for data in segment_data:
-        _add_road_segment(data.position, data.size, data.rotation, road_material, curb_material, red_curb_material, marking_material)
-
-    _add_ramp(Vector3(-1.5, 0.0, -16.5), 0.0)
-    _add_ramp(Vector3(6.8, 0.34, -47.5), -18.0)
-
-    _add_guardrail(Vector3(-6.35, 0.1, -20.0), 0.0, 14.0)
-    _add_guardrail(Vector3(10.7, 0.65, -40.0), -18.0, 12.0)
-    _add_guardrail(Vector3(15.0, 0.85, -53.0), -10.0, 9.0)
-    _add_tunnel(Vector3(9.0, 0.48, -53.0), -10.0, 10.0)
-
-    _add_barrier(Vector3(-4.0, 0.65, -5.0), 0.0)
-    _add_barrier(Vector3(3.5, 0.62, -30.0), -8.0)
-    _add_barrier(Vector3(11.0, 1.15, -43.0), -18.0)
-    _add_barrel(Vector3(1.8, 0.7, -34.0))
-    _add_barrel(Vector3(8.0, 1.0, -57.0))
-
-func _make_material(color: Color, metallic: float, roughness: float) -> StandardMaterial3D:
-    var material := StandardMaterial3D.new()
-    material.albedo_color = color
-    material.metallic = metallic
-    material.roughness = roughness
-    return material
-
-func _make_emission_material(color: Color, energy: float) -> StandardMaterial3D:
-    var material := _make_material(color, 0.0, 0.5)
-    material.emission_enabled = true
-    material.emission = color
-    material.emission_energy_multiplier = energy
-    return material
-
-func _add_road_segment(position: Vector3, size: Vector3, rotation_y: float, material: StandardMaterial3D, curb_material: StandardMaterial3D, red_curb_material: StandardMaterial3D, marking_material: StandardMaterial3D) -> void:
-    var road_body := StaticBody3D.new()
-    road_body.position = position
-    road_body.rotation_degrees.y = rotation_y
-    add_child(road_body)
-
-    var road_mesh := MeshInstance3D.new()
-    var road_box := BoxMesh.new()
-    road_box.size = size
-    road_mesh.mesh = road_box
-    road_mesh.material_override = material
-    road_body.add_child(road_mesh)
-
-    var collision := CollisionShape3D.new()
-    var shape := BoxShape3D.new()
-    shape.size = size
-    collision.shape = shape
-    road_body.add_child(collision)
-
-    var curb_height := 0.12
-    var curb_width := 0.3
-    for side in [-1.0, 1.0]:
-        var curb := MeshInstance3D.new()
-        var curb_mesh := BoxMesh.new()
-        curb_mesh.size = Vector3(curb_width, curb_height, size.z)
-        curb.mesh = curb_mesh
-        curb.position = Vector3(side * (size.x * 0.5 + curb_width * 0.5), size.y * 0.5 + curb_height * 0.5, 0.0)
-        curb.material_override = curb_material
-        road_body.add_child(curb)
-
-        var red_curb := MeshInstance3D.new()
-        var red_mesh := BoxMesh.new()
-        red_mesh.size = Vector3(curb_width, curb_height + 0.01, minf(1.5, size.z * 0.12))
-        red_curb.mesh = red_mesh
-        red_curb.position = Vector3(side * (size.x * 0.5 + curb_width * 0.5), size.y * 0.5 + curb_height * 0.5, -size.z * 0.36)
-        red_curb.material_override = red_curb_material
-        road_body.add_child(red_curb)
-
-    var dash_count := maxi(2, int(size.z / 3.0))
-    for i in range(dash_count):
-        var dash := MeshInstance3D.new()
-        var dash_mesh := BoxMesh.new()
-        dash_mesh.size = Vector3(0.16, 0.025, 1.35)
-        dash.mesh = dash_mesh
-        dash.position = Vector3(0.0, size.y * 0.5 + 0.025, -size.z * 0.5 + 1.8 + i * 3.0)
-        dash.material_override = marking_material
-        road_body.add_child(dash)
-
-func _add_guardrail(position: Vector3, rotation_y: float, length: float) -> void:
-    var rail := StaticBody3D.new()
-    rail.position = position
-    rail.rotation_degrees.y = rotation_y
-    add_child(rail)
-
-    var rail_material := _make_material(Color(0.35, 0.38, 0.42), 0.75, 0.35)
-    var post_material := _make_material(Color(0.16, 0.18, 0.2), 0.7, 0.4)
-
-    var beam := MeshInstance3D.new()
-    var beam_mesh := BoxMesh.new()
-    beam_mesh.size = Vector3(0.18, 0.5, length)
-    beam.mesh = beam_mesh
-    beam.position.y = 0.85
-    beam.material_override = rail_material
-    rail.add_child(beam)
-
-    var post_count := maxi(2, int(length / 2.5))
-    for i in range(post_count):
-        var post := MeshInstance3D.new()
-        var post_mesh := BoxMesh.new()
-        post_mesh.size = Vector3(0.16, 0.85, 0.16)
-        post.mesh = post_mesh
-        post.position = Vector3(0.0, 0.45, -length * 0.5 + 0.8 + i * (length - 1.6) / float(post_count - 1))
-        post.material_override = post_material
-        rail.add_child(post)
-
-    var collision := CollisionShape3D.new()
-    var shape := BoxShape3D.new()
-    shape.size = Vector3(0.35, 1.0, length)
-    collision.shape = shape
-    collision.position.y = 0.7
-    rail.add_child(collision)
-
-func _add_ramp(position: Vector3, rotation_y: float) -> void:
-    var ramp := StaticBody3D.new()
-    ramp.position = position
-    ramp.rotation_degrees.y = rotation_y
-    add_child(ramp)
-
-    var mesh_instance := MeshInstance3D.new()
-    var mesh := BoxMesh.new()
-    mesh.size = Vector3(5.0, 0.7, 6.0)
-    mesh_instance.mesh = mesh
-    mesh_instance.position = Vector3(0.0, 0.25, 0.0)
-    mesh_instance.rotation_degrees.x = -10.0
-    var material := StandardMaterial3D.new()
-    material.albedo_color = Color(0.2, 0.24, 0.3)
-    material.metallic = 0.25
-    mesh_instance.material_override = material
-    ramp.add_child(mesh_instance)
-
-    var collision := CollisionShape3D.new()
-    var shape := BoxShape3D.new()
-    shape.size = Vector3(5.0, 0.7, 6.0)
-    collision.shape = shape
-    collision.position = Vector3(0.0, 0.25, 0.0)
-    collision.rotation_degrees.x = -10.0
-    ramp.add_child(collision)
-
-    var stripe := MeshInstance3D.new()
-    var stripe_mesh := BoxMesh.new()
-    stripe_mesh.size = Vector3(4.2, 0.05, 0.7)
-    stripe.mesh = stripe_mesh
-    stripe.position = Vector3(0.0, 0.65, -1.2)
-    var stripe_material := StandardMaterial3D.new()
-    stripe_material.albedo_color = Color(1.0, 0.72, 0.05)
-    stripe_material.emission_enabled = true
-    stripe_material.emission = Color(0.8, 0.35, 0.02)
-    stripe.material_override = stripe_material
-    ramp.add_child(stripe)
-
-func _add_tunnel(position: Vector3, rotation_y: float, length: float) -> void:
-    var tunnel := Node3D.new()
-    tunnel.position = position
-    tunnel.rotation_degrees.y = rotation_y
-    add_child(tunnel)
-
-    var concrete := _make_material(Color(0.18, 0.2, 0.23), 0.2, 0.82)
-
-    var roof := MeshInstance3D.new()
-    var roof_mesh := BoxMesh.new()
-    roof_mesh.size = Vector3(12.8, 0.45, length)
-    roof.mesh = roof_mesh
-    roof.position = Vector3(0.0, 4.4, 0.0)
-    roof.material_override = concrete
-    tunnel.add_child(roof)
-
-    for side in [-1.0, 1.0]:
-        var wall := MeshInstance3D.new()
-        var wall_mesh := BoxMesh.new()
-        wall_mesh.size = Vector3(0.45, 4.4, length)
-        wall.mesh = wall_mesh
-        wall.position = Vector3(side * 6.15, 2.2, 0.0)
-        wall.material_override = concrete
-        tunnel.add_child(wall)
-
-    for side in [-1.0, 1.0]:
-        for z in [-length * 0.5, length * 0.5]:
-            var light := OmniLight3D.new()
-            light.position = Vector3(side * 4.6, 3.5, z)
-            light.omni_range = 7.0
-            light.light_energy = 1.3
-            light.light_color = Color(0.8, 0.88, 1.0)
-            tunnel.add_child(light)
-
-func _add_barrier(position: Vector3, rotation_y: float) -> void:
-    var obstacle := StaticBody3D.new()
-    obstacle.position = position
-    obstacle.rotation_degrees.y = rotation_y
-    add_child(obstacle)
-
-    var mesh_instance := MeshInstance3D.new()
-    var mesh := BoxMesh.new()
-    mesh.size = Vector3(3.0, 1.0, 0.55)
-    mesh_instance.mesh = mesh
-    mesh_instance.position.y = 0.5
-    var material := StandardMaterial3D.new()
-    material.albedo_color = Color(0.9, 0.12, 0.04)
-    mesh_instance.material_override = material
-    obstacle.add_child(mesh_instance)
-
-    var collision := CollisionShape3D.new()
-    var shape := BoxShape3D.new()
-    shape.size = Vector3(3.0, 1.0, 0.55)
-    collision.shape = shape
-    collision.position.y = 0.5
-    obstacle.add_child(collision)
-
-func _add_barrel(position: Vector3) -> void:
-    var obstacle := StaticBody3D.new()
-    obstacle.position = position
-    add_child(obstacle)
-
-    var mesh_instance := MeshInstance3D.new()
-    var mesh := CylinderMesh.new()
-    mesh.top_radius = 0.45
-    mesh.bottom_radius = 0.45
-    mesh.height = 1.1
-    mesh_instance.mesh = mesh
-    var material := StandardMaterial3D.new()
-    material.albedo_color = Color(0.95, 0.45, 0.03)
-    mesh_instance.material_override = material
-    obstacle.add_child(mesh_instance)
-
-    var collision := CollisionShape3D.new()
-    var shape := CylinderShape3D.new()
-    shape.radius = 0.45
-    shape.height = 1.1
-    collision.shape = shape
-    obstacle.add_child(collision)
 
 func _build_car_select(parent: Control) -> void:
     car_label = Label.new()
@@ -1429,19 +1235,12 @@ func _countdown_step() -> void:
         tween.finished.connect(countdown_label.queue_free)
 
 func _build_ai_opponents() -> void:
-    var route: Array[Vector3] = [
-        Vector3(0.0, 0.95, 6.0),
-        Vector3(0.0, 0.95, -8.0),
-        Vector3(2.0, 1.05, -24.0),
-        Vector3(6.0, 1.25, -39.0),
-        Vector3(9.0, 1.5, -52.0),
-        Vector3(10.0, 1.8, -65.0)
-    ]
+    var route: Array[Vector3] = track_path.duplicate()
     var ai_script := load("res://scripts/ai_car.gd")
     for i in range(ai_count):
         var ai := CharacterBody3D.new()
         ai.name = "AIOpponent%d" % (i + 1)
-        ai.position = Vector3(-3.0 + i * 3.0, 1.0, 19.0 + i * 2.0)
+        ai.position = Vector3(-2.5 + i * 2.5, 1.0, 17.0 + i * 2.0)
         ai.set_script(ai_script)
         add_child(ai)
         ai.call("setup", route)
