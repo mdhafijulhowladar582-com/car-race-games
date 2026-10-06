@@ -14,6 +14,7 @@ on:
       - "android_plugin/**"
       - "firestore.rules"
       - "google-services.json"
+      - "assets/**"
       - ".github/workflows/android-apk.yml"
 
 jobs:
@@ -69,6 +70,8 @@ jobs:
           rm -f Godot_v4.7-stable_linux.x86_64.zip Godot_v4.7-stable_export_templates.tpz
       - name: Configure Godot Android SDK and debug signing
         shell: bash
+        env:
+          DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
         run: |
           mkdir -p ~/.config/godot
           rm -f ~/.config/godot/debug.keystore
