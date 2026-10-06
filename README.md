@@ -32,6 +32,16 @@ Godot 4.x 3D car racing game for Android and PC.
 - Android APK/AAB export still requires a Godot installation with Android export templates and the Android SDK/JDK
 - Release builds additionally require Android signing configuration
 
+## Professional Audio
+
+- Layered low/high procedural engine audio with speed and throttle response
+- Continuous tire/road surface sound that reacts to speed, braking and steering
+- Speed wind layer increases naturally with vehicle velocity
+- Controlled brake audio that starts and stops correctly
+- Collision impact audio and game-over audio
+- Track ambience layer for environmental atmosphere
+- All audio is generated at runtime with lightweight WAV streams and no external audio assets
+
 ## Better Effects
 
 - Lightweight procedural tire dust particles during hard braking and steering
