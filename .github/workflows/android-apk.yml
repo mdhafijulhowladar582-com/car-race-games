@@ -89,11 +89,21 @@ jobs:
         shell: bash
         continue-on-error: true
         run: timeout 60 godot --headless --path . -e --quit
+      - name: Verify export preset
+        shell: bash
+        run: |
+          test -f export_presets.cfg
+          grep -q 'name="Android"' export_presets.cfg
+          grep -q 'platform="Android"' export_presets.cfg
+          grep -q 'package/unique_name="com.hafijulnovalabs.carracegames"' export_presets.cfg
       - name: Export debug APK
         shell: bash
         run: |
+          rm -f CarRaceGames.apk
           godot --headless --path . --export-debug Android CarRaceGames.apk
           test -s CarRaceGames.apk
+          file CarRaceGames.apk
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
