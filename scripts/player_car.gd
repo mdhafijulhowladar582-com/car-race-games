@@ -28,6 +28,9 @@ var health := 100.0
 var damage_timer := 0.0
 var is_game_over := false
 var engine_player: AudioStreamPlayer3D
+var engine_high_player: AudioStreamPlayer3D
+var tire_player: AudioStreamPlayer3D
+var wind_player: AudioStreamPlayer3D
 var brake_player: AudioStreamPlayer3D
 var crash_player: AudioStreamPlayer3D
 var game_over_player: AudioStreamPlayer3D
@@ -56,6 +59,7 @@ func _physics_process(delta: float) -> void:
         steering = move_toward(steering, 0.0, steering_response * delta)
         _apply_movement(delta)
         _update_engine_audio(delta)
+        _update_driving_audio(delta)
         _update_effects()
         return
 
@@ -66,6 +70,7 @@ func _physics_process(delta: float) -> void:
     _update_steering(steer_input, delta)
     _apply_movement(delta)
     _update_engine_audio(delta)
+    _update_driving_audio(delta)
     _update_effects()
 
     if Input.is_action_pressed("brake") and abs(speed) > 1.0:
@@ -237,30 +242,54 @@ func _trigger_crash_effect(impact_speed: float) -> void:
 
 func _build_audio() -> void:
     engine_player = AudioStreamPlayer3D.new()
-    engine_player.name = "EngineAudio"
-    engine_player.stream = _create_tone(90.0, 0.35)
-    engine_player.volume_db = -10.0
-    engine_player.max_distance = 45.0
+    engine_player.name = "EngineLow"
+    engine_player.stream = _create_tone(75.0, 0.5)
+    engine_player.volume_db = -13.0
+    engine_player.max_distance = 55.0
     add_child(engine_player)
     engine_player.play()
 
+    engine_high_player = AudioStreamPlayer3D.new()
+    engine_high_player.name = "EngineHigh"
+    engine_high_player.stream = _create_tone(155.0, 0.35)
+    engine_high_player.volume_db = -18.0
+    engine_high_player.max_distance = 50.0
+    add_child(engine_high_player)
+    engine_high_player.play()
+
+    tire_player = AudioStreamPlayer3D.new()
+    tire_player.name = "TireRoadAudio"
+    tire_player.stream = _create_noise(0.65)
+    tire_player.volume_db = -26.0
+    tire_player.max_distance = 42.0
+    add_child(tire_player)
+    tire_player.play()
+
+    wind_player = AudioStreamPlayer3D.new()
+    wind_player.name = "SpeedWindAudio"
+    wind_player.stream = _create_noise(0.9)
+    wind_player.volume_db = -32.0
+    wind_player.max_distance = 55.0
+    add_child(wind_player)
+    wind_player.play()
+
     brake_player = AudioStreamPlayer3D.new()
     brake_player.name = "BrakeAudio"
-    brake_player.stream = _create_tone(180.0, 0.08)
-    brake_player.volume_db = -14.0
-    brake_player.max_distance = 30.0
+    brake_player.stream = _create_tone(210.0, 0.16)
+    brake_player.volume_db = -22.0
+    brake_player.max_distance = 34.0
     add_child(brake_player)
 
     crash_player = AudioStreamPlayer3D.new()
     crash_player.name = "CrashAudio"
-    crash_player.stream = _create_noise(0.18)
-    crash_player.volume_db = -3.0
+    crash_player.stream = _create_noise(0.22)
+    crash_player.volume_db = -2.0
     crash_player.max_distance = 50.0
     add_child(crash_player)
 
     game_over_player = AudioStreamPlayer3D.new()
     game_over_player.name = "GameOverAudio"
-    game_over_player.stream = _create_tone(55.0, 0.55)
+    game_over_player.stream = _create_tone(55.0, 0.7)
     game_over_player.volume_db = -5.0
     game_over_player.max_distance = 50.0
     add_child(game_over_player)
@@ -312,12 +341,37 @@ func _update_engine_audio(delta: float) -> void:
         return
 
     var speed_ratio := clamp(abs(speed) / max_speed, 0.0, 1.0)
-    engine_player.pitch_scale = lerp(0.85, 1.8, speed_ratio)
-    engine_player.volume_db = lerp(-18.0, -7.0, speed_ratio)
+    var throttle_ratio := 1.0 if Input.is_action_pressed("accelerate") else 0.35
+    engine_player.pitch_scale = lerp(0.82, 1.75, speed_ratio)
+    engine_player.volume_db = lerp(-20.0, -6.0, speed_ratio) + lerp(-2.0, 2.0, throttle_ratio)
+
+    if is_instance_valid(engine_high_player):
+        engine_high_player.pitch_scale = lerp(0.72, 2.2, speed_ratio)
+        engine_high_player.volume_db = lerp(-29.0, -11.0, speed_ratio) + lerp(-2.0, 3.0, throttle_ratio)
 
 func _play_brake_audio() -> void:
     if is_instance_valid(brake_player) and not brake_player.playing:
         brake_player.play()
+
+func _update_driving_audio(_delta: float) -> void:
+    var speed_ratio := clamp(abs(speed) / max_speed, 0.0, 1.0)
+    var braking_now := Input.is_action_pressed("brake") and abs(speed) > 1.0
+    var steering_now := abs(steering) > 0.55 and abs(speed) > 8.0
+
+    if is_instance_valid(tire_player):
+        tire_player.volume_db = lerp(-34.0, -12.0, speed_ratio)
+        tire_player.pitch_scale = lerp(0.75, 1.55, speed_ratio)
+        if braking_now or steering_now:
+            tire_player.volume_db += 5.0
+
+    if is_instance_valid(wind_player):
+        wind_player.volume_db = lerp(-42.0, -10.0, speed_ratio)
+        wind_player.pitch_scale = lerp(0.7, 1.25, speed_ratio)
+
+    if braking_now:
+        _play_brake_audio()
+    elif is_instance_valid(brake_player) and brake_player.playing:
+        brake_player.stop()
 
 func _play_crash_audio() -> void:
     if is_instance_valid(crash_player):
