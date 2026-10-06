@@ -25,6 +25,8 @@ var customization_label: Label
 var selected_color := Color(0.82, 0.025, 0.02)
 var selected_wheels := "SPORT"
 var upgrade_level := 0
+var garage_overlay: ColorRect
+var garage_info_label: Label
 var ai_opponents: Array[Node3D] = []
 var ai_count := 3
 var ambience_player: AudioStreamPlayer3D
@@ -736,6 +738,7 @@ func _build_car_select(parent: Control) -> void:
     _add_custom_button(parent, "BLACK WHEELS", Vector2(-105.0, 180.0), "wheel_black")
     _add_custom_button(parent, "GOLD WHEELS", Vector2(100.0, 180.0), "wheel_gold")
     _add_custom_button(parent, "UPGRADE +", Vector2(-95.0, 245.0), "upgrade")
+    _build_garage(parent)
 
 func _add_car_button(parent: Control, car_name: String, button_position: Vector2) -> void:
     var button := Button.new()
@@ -775,6 +778,8 @@ func _apply_customization(action_name: String) -> void:
     elif action_name == "upgrade":
         upgrade_level = mini(upgrade_level + 1, 3)
     _refresh_customization_label()
+    if is_instance_valid(garage_info_label):
+        garage_info_label.text = "CAR: %s\\nCOLOR: %s\\nWHEELS: %s\\nUPGRADE: %d/3\\n\\nSPEED: %d   ACCEL: %d   HANDLING: %.1f" % [_garage_car_name(), _garage_color_name(), selected_wheels, upgrade_level, _garage_speed(), _garage_accel(), _garage_handling()]
 
 func _refresh_customization_label() -> void:
     var color_name := "RED"
@@ -792,6 +797,94 @@ func _select_car(car_name: String) -> void:
         car_label.text = "CAR: GT\nSpeed 38 | Acceleration 16 | Handling 2.4"
     else:
         car_label.text = "CAR: SPORTS\nSpeed 34 | Acceleration 18 | Handling 2.2"
+
+func _build_garage(parent: Control) -> void:
+    var garage_button := Button.new()
+    garage_button.text = "GARAGE"
+    garage_button.set_anchors_preset(Control.PRESET_CENTER)
+    garage_button.position = Vector2(-360.0, 315.0)
+    garage_button.size = Vector2(180.0, 58.0)
+    garage_button.focus_mode = Control.FOCUS_NONE
+    garage_button.add_theme_font_size_override("font_size", 20)
+    garage_button.pressed.connect(_open_garage)
+    parent.add_child(garage_button)
+
+func _open_garage() -> void:
+    if is_instance_valid(garage_overlay):
+        garage_overlay.queue_free()
+
+    garage_overlay = ColorRect.new()
+    garage_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    garage_overlay.color = Color(0.015, 0.02, 0.03, 0.96)
+    garage_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+    garage_overlay.z_index = 50
+    mode_overlay.add_child(garage_overlay)
+
+    var title := Label.new()
+    title.text = "🏪 GARAGE"
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title.set_anchors_preset(Control.PRESET_CENTER)
+    title.position = Vector2(-360.0, -300.0)
+    title.size = Vector2(720.0, 65.0)
+    title.add_theme_font_size_override("font_size", 42)
+    garage_overlay.add_child(title)
+
+    garage_info_label = Label.new()
+    garage_info_label.text = "CAR: %s\nCOLOR: %s\nWHEELS: %s\nUPGRADE: %d/3\n\nSPEED: %d   ACCEL: %d   HANDLING: %.1f" % [_garage_car_name(), _garage_color_name(), selected_wheels, upgrade_level, _garage_speed(), _garage_accel(), _garage_handling()]
+    garage_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    garage_info_label.set_anchors_preset(Control.PRESET_CENTER)
+    garage_info_label.position = Vector2(-300.0, -180.0)
+    garage_info_label.size = Vector2(600.0, 190.0)
+    garage_info_label.add_theme_font_size_override("font_size", 25)
+    garage_overlay.add_child(garage_info_label)
+
+    var close_button := Button.new()
+    close_button.text = "BACK TO RACE SETUP"
+    close_button.set_anchors_preset(Control.PRESET_CENTER)
+    close_button.position = Vector2(-180.0, 190.0)
+    close_button.size = Vector2(360.0, 70.0)
+    close_button.focus_mode = Control.FOCUS_NONE
+    close_button.add_theme_font_size_override("font_size", 22)
+    close_button.pressed.connect(_close_garage)
+    garage_overlay.add_child(close_button)
+
+func _close_garage() -> void:
+    if is_instance_valid(garage_overlay):
+        garage_overlay.queue_free()
+        garage_overlay = null
+
+func _garage_car_name() -> String:
+    return selected_car
+
+func _garage_color_name() -> String:
+    if selected_color == Color(0.04, 0.08, 0.72):
+        return "BLUE"
+    if selected_color == Color(0.04, 0.55, 0.18):
+        return "GREEN"
+    return "RED"
+
+func _garage_speed() -> int:
+    var speed := 34
+    if selected_car == "MUSCLE":
+        speed = 30
+    elif selected_car == "GT":
+        speed = 38
+    return speed + upgrade_level * 1.5
+
+func _garage_accel() -> int:
+    var accel := 18
+    if selected_car == "MUSCLE":
+        accel = 20
+    elif selected_car == "GT":
+        accel = 16
+    return accel + upgrade_level * 0.8
+
+func _garage_handling() -> float:
+    if selected_car == "MUSCLE":
+        return 1.8
+    if selected_car == "GT":
+        return 2.4
+    return 2.2
 
 func _build_mode_select() -> void:
     var canvas := CanvasLayer.new()
