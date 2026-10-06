@@ -169,6 +169,54 @@ func _ready() -> void:
         car.game_over.connect(_on_game_over)
         _on_health_changed(car.health, car.max_health)
 
+func _physics_process(delta: float) -> void:
+    var car := get_node_or_null("PlayerCar")
+    if not car or race_finished:
+        return
+
+    if not race_started:
+        countdown_time = maxf(countdown_time - delta, 0.0)
+        car.speed = 0.0
+        car.velocity = Vector3.ZERO
+        if countdown_label:
+            countdown_label.text = str(ceili(countdown_time)) if countdown_time > 0.0 else "GO!"
+        if countdown_time <= 0.0:
+            race_started = true
+            race_elapsed = 0.0
+            for ai in ai_opponents:
+                if is_instance_valid(ai) and ai.has_method("start_race"):
+                    ai.start_race()
+        return
+
+    race_elapsed += delta
+    var progress := clampf((race_start_z - car.global_position.z) / (race_start_z - finish_z), 0.0, 1.0)
+    current_checkpoint = clampi(int(floor(progress * total_checkpoints)), 0, total_checkpoints)
+
+    if race_bar:
+        race_bar.value = progress
+    if timer_label:
+        var minutes := int(race_elapsed / 60.0)
+        var seconds := fmod(race_elapsed, 60.0)
+        timer_label.text = "TIME %02d:%05.2f" % [minutes, seconds]
+    if checkpoint_label:
+        checkpoint_label.text = "CHECKPOINT %d/%d" % [current_checkpoint, total_checkpoints]
+
+    player_race_position = 1
+    for ai in ai_opponents:
+        if is_instance_valid(ai) and ai.global_position.z < car.global_position.z:
+            player_race_position += 1
+    if position_label:
+        position_label.text = "POSITION %d/%d" % [player_race_position, ai_opponents.size() + 1]
+
+    if car.global_position.z <= finish_z:
+        race_finished = true
+        race_started = false
+        if race_label:
+            race_label.text = "FINISH"
+        for ai in ai_opponents:
+            if is_instance_valid(ai):
+                ai.race_active = false
+
 func _build_mobile_controls() -> void:
     mobile_controls = CanvasLayer.new()
     add_child(mobile_controls)
@@ -206,6 +254,38 @@ func _build_race_system() -> void:
     race_label.add_theme_font_size_override("font_size", 30)
     add_child(race_label)
 
+    countdown_label = Label.new()
+    countdown_label.text = "3"
+    countdown_label.position = Vector2(560.0, 120.0)
+    countdown_label.add_theme_font_size_override("font_size", 64)
+    add_child(countdown_label)
+
+    timer_label = Label.new()
+    timer_label.text = "TIME 00:00.00"
+    timer_label.position = Vector2(500.0, 70.0)
+    timer_label.add_theme_font_size_override("font_size", 22)
+    add_child(timer_label)
+
+    position_label = Label.new()
+    position_label.text = "POSITION 1/4"
+    position_label.position = Vector2(20.0, 90.0)
+    position_label.add_theme_font_size_override("font_size", 20)
+    add_child(position_label)
+
+    checkpoint_label = Label.new()
+    checkpoint_label.text = "CHECKPOINT 0/3"
+    checkpoint_label.position = Vector2(20.0, 120.0)
+    checkpoint_label.add_theme_font_size_override("font_size", 20)
+    add_child(checkpoint_label)
+
+    race_bar = ProgressBar.new()
+    race_bar.min_value = 0.0
+    race_bar.max_value = 1.0
+    race_bar.value = 0.0
+    race_bar.position = Vector2(420.0, 110.0)
+    race_bar.size = Vector2(420.0, 18.0)
+    add_child(race_bar)
+
 func _build_ai_opponents() -> void:
     if track_path.is_empty():
         return
@@ -218,7 +298,7 @@ func _build_ai_opponents() -> void:
         add_child(ai)
         ai_opponents.append(ai)
         ai.setup(track_path, i)
-        ai.start_race()
+        ai.race_active = false
 
 func _build_game_over_ui() -> void:
     game_over_overlay = ColorRect.new()
