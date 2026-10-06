@@ -49,10 +49,47 @@ var car_model := "SPORTS"
 var car_max_speed := 34.0
 var car_acceleration := 18.0
 var car_steering := 2.2
+var customization_color := Color(0.82, 0.025, 0.02)
+var wheel_style := "SPORT"
+var performance_level := 0
 
 signal health_changed(current_health: float, maximum_health: float)
 signal game_over
 signal crash_impact
+
+func customize_car(color: Color, wheel_style_name: String, upgrade_level: int) -> void:
+    customization_color = color
+    wheel_style = wheel_style_name
+    performance_level = clamp(upgrade_level, 0, 3)
+    var speed_bonus := float(performance_level) * 1.5
+    var acceleration_bonus := float(performance_level) * 0.8
+    max_speed = car_max_speed + speed_bonus
+    acceleration = car_acceleration + acceleration_bonus
+    _apply_custom_color()
+    _apply_wheel_style()
+
+func _apply_custom_color() -> void:
+    var body_root := get_node_or_null("CarVisual")
+    if not body_root:
+        return
+    for node in body_root.get_children():
+        var mesh := node as MeshInstance3D
+        if mesh and (mesh.name == "Body" or mesh.name == "Hood"):
+            mesh.material_override = _material(customization_color, 0.6, 0.18)
+
+func _apply_wheel_style() -> void:
+    var body_root := get_node_or_null("CarVisual")
+    if not body_root:
+        return
+    var rim_color := Color(0.42, 0.44, 0.48)
+    if wheel_style == "BLACK":
+        rim_color = Color(0.03, 0.035, 0.045)
+    elif wheel_style == "GOLD":
+        rim_color = Color(0.85, 0.58, 0.08)
+    for node in get_tree().get_nodes_in_group("car_rim"):
+        var mesh := node as MeshInstance3D
+        if mesh:
+            mesh.material_override = _material(rim_color, 0.9, 0.18)
 
 func configure_car(model_name: String) -> void:
     car_model = model_name
@@ -696,6 +733,7 @@ func _add_wheel(pos: Vector3) -> void:
     rim_mesh.height = 0.32
     rim.mesh = rim_mesh
     rim.rotation_degrees = Vector3(0.0, 0.0, 90.0)
+    rim.add_to_group("car_rim")
     rim.material_override = _material(Color(0.42, 0.44, 0.48), 0.9, 0.18)
     wheel_root.add_child(rim)
 
