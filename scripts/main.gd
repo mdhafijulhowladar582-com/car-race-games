@@ -786,6 +786,9 @@ func _on_finish_body_entered(body: Node3D) -> void:
     if race_finished or body.name != "PlayerCar":
         return
     race_finished = true
+    var car := get_node_or_null("PlayerCar")
+    if car and car.has_method("set_finish_cinematic"):
+        car.set_finish_cinematic(true)
     _show_finish_overlay()
 
 func _show_finish_overlay() -> void:
