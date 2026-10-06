@@ -15,7 +15,6 @@ const LEADERBOARD_PATH := "/leaderboard"
 const FIREBASE_API_KEY := "AIzaSyAhvuZL5GDJuq3NedLMAGPt7XujpZRow"
 const AUTH_URL := "https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=%s" % FIREBASE_API_KEY
 
-var http: HTTPRequest
 var id_token := ""
 var refresh_token := ""
 var user_id := ""
@@ -24,12 +23,6 @@ var last_submitted_time := 0.0
 var last_best_time := 0.0
 const MAX_SCORE_RETRIES := 2
 var _score_retries := 0
-
-func _ready() -> void:
-    http = HTTPRequest.new()
-    http.name = "FirebaseHTTP"
-    add_child(http)
-    http.request_completed.connect(_on_request_completed)
 
 func set_id_token(token: String) -> void:
     id_token = token.strip_edges()
@@ -316,20 +309,23 @@ func _on_global_rank_completed(result: int, response_code: int, _headers: Packed
     rank_loaded.emit(faster + 1)
 
 func load_public_leaderboard() -> void:
-    if not http:
-        leaderboard_failed.emit("Firebase HTTP service is not ready.")
-        return
+    var request := HTTPRequest.new()
+    request.name = "FirebaseLeaderboard"
+    add_child(request)
+    request.request_completed.connect(_on_request_completed.bind(request))
 
     var url := FIRESTORE_BASE_URL + LEADERBOARD_PATH + "?pageSize=100&orderBy=time"
     var headers := PackedStringArray(["Accept: application/json"])
     if not id_token.is_empty():
         headers.append("Authorization: Bearer " + id_token)
 
-    var error := http.request(url, headers, HTTPClient.METHOD_GET)
+    var error := request.request(url, headers, HTTPClient.METHOD_GET)
     if error != OK:
+        request.queue_free()
         leaderboard_failed.emit("Firebase request could not start.")
 
-func _on_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+func _on_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest) -> void:
+    request.queue_free()
     if result != HTTPRequest.RESULT_SUCCESS:
         leaderboard_failed.emit("Firebase network connection failed.")
         return
