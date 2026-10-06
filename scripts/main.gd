@@ -41,7 +41,6 @@ var race_finished := false
 var race_started := false
 var race_elapsed := 0.0
 var countdown_time := 3.0
-var career_lap_complete := false
 var current_checkpoint := 0
 var total_checkpoints := 3
 var lap := 1
@@ -75,14 +74,10 @@ var master_volume := 1.0
 var steering_sensitivity := 1.0
 var vibration_enabled := true
 var settings_path := "user://car_race_settings.json"
-var target_fps := 60
-var battery_saver := false
 var leaderboard_overlay: ColorRect
 var leaderboard_label: Label
 var leaderboard_entries: Array = []
 var local_leaderboard: Array = []
-var online_leaderboard_url := ""
-var leaderboard_http: HTTPRequest
 var online_leaderboard_status := "OFFLINE"
 var firebase_service: Node
 var google_signin: RefCounted
@@ -91,7 +86,6 @@ var auth_status_label: Label
 var firebase_auth_status := "GUEST"
 var firebase_display_name := ""
 var global_rank := 0
-var career_level := 1
 var career_wins := 0
 var career_races := 0
 var career_stars := 0
