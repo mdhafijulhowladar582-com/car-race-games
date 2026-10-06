@@ -1826,8 +1826,26 @@ func _build_professional_mobile_hud() -> void:
     canvas.layer = 9
     add_child(canvas)
 
+    var safe_root := Control.new()
+    safe_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    safe_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    canvas.add_child(safe_root)
+
+    var top_left := MarginContainer.new()
+    top_left.set_anchors_preset(Control.PRESET_TOP_LEFT)
+    top_left.position = Vector2(24.0, 24.0)
+    top_left.add_theme_constant_override("margin_left", 0)
+    top_left.add_theme_constant_override("margin_top", 0)
+    safe_root.add_child(top_left)
+
+    var info := Label.new()
+    info.text = "RACE"
+    info.add_theme_font_size_override("font_size", 22)
+    top_left.add_child(info)
+
     var speed_panel := Panel.new()
-    speed_panel.position = Vector2(500.0, 575.0)
+    speed_panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+    speed_panel.position = Vector2(-140.0, -145.0)
     speed_panel.size = Vector2(280.0, 125.0)
     var panel_style := StyleBoxFlat.new()
     panel_style.bg_color = Color(0.015, 0.02, 0.03, 0.82)
@@ -1860,7 +1878,8 @@ func _build_professional_mobile_hud() -> void:
     speed_panel.add_child(speed_bar)
 
     var mini_panel := Panel.new()
-    mini_panel.position = Vector2(1100.0, 35.0)
+    mini_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+    mini_panel.position = Vector2(-170.0, 35.0)
     mini_panel.size = Vector2(145.0, 220.0)
     mini_panel.add_theme_stylebox_override("panel", panel_style)
     canvas.add_child(mini_panel)
