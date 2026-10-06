@@ -34,12 +34,12 @@ dependencies {
 
 tasks.register<Copy>("copyDebugAarToProject") {
     from(layout.buildDirectory.file("outputs/aar/FirebaseGoogleSignIn-debug.aar"))
-    into(layout.projectDirectory.dir("../addons/firebase_google_signin/bin/debug"))
+    into(layout.projectDirectory.dir("../../addons/firebase_google_signin/bin/debug"))
 }
 
 tasks.register<Copy>("copyReleaseAarToProject") {
     from(layout.buildDirectory.file("outputs/aar/FirebaseGoogleSignIn-release.aar"))
-    into(layout.projectDirectory.dir("../addons/firebase_google_signin/bin/release"))
+    into(layout.projectDirectory.dir("../../addons/firebase_google_signin/bin/release"))
 }
 
 tasks.named("assemble") {
