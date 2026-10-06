@@ -30,6 +30,14 @@ jobs:
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.1"
+      - name: Verify Android build environment
+        shell: bash
+        run: |
+          java -version
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          test -d "$ANDROID_HOME/platform-tools"
+          test -d "$ANDROID_HOME/platforms/android-35"
+          test -d "$ANDROID_HOME/build-tools/35.0.1"
       - name: Cache Godot
         id: godot-cache
         uses: actions/cache@v4
@@ -38,7 +46,7 @@ jobs:
             ~/.local/share/godot/export_templates/**
             ~/.config/godot/**
             /usr/local/bin/godot
-          key: ${{ runner.os }}-godot-4.7-android-v2
+          key: ${{ runner.os }}-godot-4.7-android-v3
       - name: Download Godot 4.7 and Android templates
         if: steps.godot-cache.outputs.cache-hit != 'true'
         shell: bash
@@ -57,6 +65,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p ~/.config/godot
+          rm -f ~/.config/godot/debug.keystore
           keytool -genkeypair -v -keystore ~/.config/godot/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US" -noprompt
           cat > ~/.config/godot/editor_settings-4.tres <<EOF
           [gd_resource type="EditorSettings" format=3]
@@ -71,8 +80,8 @@ jobs:
       - name: Install Godot Android build template
         shell: bash
         run: |
-          mkdir -p android/plugins
-          mkdir -p android/build
+          rm -rf android
+          mkdir -p android/plugins android/build
           touch android/build/.gdignore
           printf '4.7.stable' > android/.build_version
           unzip -q ~/.local/share/godot/export_templates/4.7.stable/android_source.zip -d android/build
