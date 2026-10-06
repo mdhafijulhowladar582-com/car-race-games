@@ -1,0 +1,34 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "project.godot"
+      - "export_presets.cfg"
+      - "scenes/**"
+      - "scripts/**"
+      - ".github/workflows/android-apk.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Export Godot Android APK
+        uses: dulvui/godot-android-export@v4.0.4
+        with:
+          godot-version: 4.7
+          godot-channel: stable
+          working-directory: .
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Car-Race-Games-APK
+          path: CarRaceGames.apk
+          if-no-files-found: error
