@@ -246,11 +246,11 @@ func _add_environment_banner(position: Vector3, text_value: String) -> void:
     add_child(banner)
 
 func _build_environment_scenery() -> void:
-    var grass := _make_material(Color(0.07, 0.22, 0.09), 0.0, 0.95)
-    var mountain := _make_material(Color(0.12, 0.16, 0.2), 0.0, 1.0)
-    var building := _make_material(Color(0.22, 0.25, 0.3), 0.15, 0.82)
+    var grass := _make_pbr_material(Color(0.07, 0.22, 0.09), 0.96, 0.0, 3.0, 301)
+    var mountain := _make_pbr_material(Color(0.12, 0.16, 0.2), 0.92, 0.0, 2.0, 302)
+    var building := _make_pbr_material(Color(0.22, 0.25, 0.3), 0.62, 0.22, 3.0, 303)
     var glass := _make_emission_material(Color(0.12, 0.28, 0.48), 0.45)
-    var lamp := _make_material(Color(0.08, 0.09, 0.1), 0.75, 0.35)
+    var lamp := _make_pbr_material(Color(0.08, 0.09, 0.1), 0.3, 0.78, 2.0, 304)
     var sign := _make_emission_material(Color(0.95, 0.7, 0.12), 0.2)
 
     _add_ground(grass)
@@ -536,14 +536,32 @@ func _add_premium_sign(position: Vector3, text_value: String, material: Standard
     board.material_override = material
     sign.add_child(board)
 
+func _make_pbr_material(base_color: Color, roughness_value: float, metallic_value: float, texture_scale: float = 4.0, seed_value: int = 1) -> StandardMaterial3D:
+    var material := StandardMaterial3D.new()
+    material.albedo_color = base_color
+    material.metallic = clampf(metallic_value, 0.0, 1.0)
+    material.roughness = clampf(roughness_value, 0.05, 1.0)
+    material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+    material.uv1_triplanar = true
+    material.uv1_world_triplanar = true
+    material.uv1_scale = Vector3.ONE * texture_scale
+    var image := Image.create(32, 32, false, Image.FORMAT_RGBA8)
+    var rng := RandomNumberGenerator.new()
+    rng.seed = seed_value
+    for y in range(32):
+        for x in range(32):
+            var variation := rng.randf_range(0.82, 1.18)
+            image.set_pixel(x, y, Color(base_color.r * variation, base_color.g * variation, base_color.b * variation, 1.0))
+    material.albedo_texture = ImageTexture.create_from_image(image)
+    return material
 func _build_high_quality_environment() -> void:
-    var terrain := _make_material(Color(0.035, 0.11, 0.045), 0.0, 1.0)
+    var terrain := _make_pbr_material(Color(0.035, 0.11, 0.045), 0.98, 0.0, 3.0, 101)
     var terrain_edge := _make_material(Color(0.07, 0.18, 0.08), 0.0, 0.92)
-    var foliage := _make_material(Color(0.025, 0.14, 0.055), 0.0, 0.9)
-    var foliage_light := _make_material(Color(0.08, 0.28, 0.11), 0.0, 0.86)
-    var concrete := _make_material(Color(0.16, 0.18, 0.2), 0.2, 0.72)
+    var foliage := _make_pbr_material(Color(0.025, 0.14, 0.055), 0.95, 0.0, 2.0, 103)
+    var foliage_light := _make_pbr_material(Color(0.08, 0.28, 0.11), 0.9, 0.0, 2.0, 104)
+    var concrete := _make_pbr_material(Color(0.16, 0.18, 0.2), 0.72, 0.18, 3.0, 105)
     var glass := _make_emission_material(Color(0.08, 0.3, 0.58), 0.9)
-    var metal := _make_material(Color(0.22, 0.24, 0.27), 0.75, 0.34)
+    var metal := _make_pbr_material(Color(0.22, 0.24, 0.27), 0.32, 0.82, 2.0, 106)
     var accent := _make_emission_material(Color(0.95, 0.18, 0.035), 0.65)
 
     _add_environment_terrain_layer(Vector3(4.0, -0.18, -27.0), Vector3(92.0, 0.28, 122.0), terrain)
@@ -735,7 +753,7 @@ func _add_curved_road_segment(a: Vector3, b: Vector3, index: int) -> void:
     road_box.size = Vector3(12.0, 0.24, length)
     road_mesh.mesh = road_box
     road_mesh.position.y = -0.08
-    road_mesh.material_override = _make_material(Color(0.055, 0.06, 0.075), 0.0, 0.82)
+    road_mesh.material_override = _make_pbr_material(Color(0.055, 0.06, 0.075), 0.84, 0.05, 5.0, 200 + index)
     road.add_child(road_mesh)
 
     var collision := CollisionShape3D.new()
