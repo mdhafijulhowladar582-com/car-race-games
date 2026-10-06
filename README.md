@@ -51,6 +51,11 @@ Godot 4.x 3D car racing game for Android and PC.
 - Metallic roadside guardrails with physical collision
 - Driveable ramps with warning stripes
 - Tunnel structure with interior lights
+- Trackside trees and vegetation
+- Distant mountain silhouettes
+- Multi-floor roadside buildings with illuminated windows
+- Street lamp posts with working lights
+- Directional roadside signs for turns, curves, ramps and finish
 - Collision barriers and barrel obstacles
 - Physical collision on road and track obstacles
 
