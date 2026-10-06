@@ -10,6 +10,9 @@ on:
       - "export_presets.cfg"
       - "scenes/**"
       - "scripts/**"
+      - "addons/**"
+      - "android_plugin/**"
+      - "firestore.rules"
       - ".github/workflows/android-apk.yml"
 
 jobs:
