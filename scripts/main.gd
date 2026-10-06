@@ -121,6 +121,18 @@ func _load_progress() -> void:
         total_races = int(data["total_races"])
     if data.has("best_time"):
         best_time = float(data["best_time"])
+    if data.has("selected_map"):
+        selected_map = str(data["selected_map"])
+    if data.has("selected_weather"):
+        selected_weather = str(data["selected_weather"])
+    if data.has("selected_car"):
+        selected_car = str(data["selected_car"])
+    if data.has("selected_color"):
+        selected_color = Color(str(data["selected_color"]))
+    if data.has("selected_wheels"):
+        selected_wheels = str(data["selected_wheels"])
+    if data.has("upgrade_level"):
+        upgrade_level = clampi(int(data["upgrade_level"]), 0, 3)
     if data.has("achievements") and data["achievements"] is Array:
         achievements.assign(data["achievements"])
     if data.has("local_leaderboard") and data["local_leaderboard"] is Array:
@@ -135,6 +147,12 @@ func _save_progress() -> void:
         "xp": xp,
         "total_races": total_races,
         "best_time": best_time,
+        "selected_map": selected_map,
+        "selected_weather": selected_weather,
+        "selected_car": selected_car,
+        "selected_color": selected_color.to_html(false),
+        "selected_wheels": selected_wheels,
+        "upgrade_level": upgrade_level,
         "achievements": achievements,
         "local_leaderboard": local_leaderboard
     }
@@ -167,6 +185,7 @@ func _load_settings() -> void:
 func _ready() -> void:
     _load_progress()
     _load_settings()
+    _apply_selected_car_to_player()
     _build_environment()
     _build_professional_track()
     _build_environment_scenery()
