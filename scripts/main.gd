@@ -532,7 +532,98 @@ func _build_settings_button() -> void:
     var button := Button.new()
     button.text = "Settings"
     button.position = Vector2(1160.0, 20.0)
+    button.size = Vector2(100.0, 42.0)
+    button.pressed.connect(_show_settings)
     add_child(button)
+
+func _show_settings() -> void:
+    if settings_overlay and is_instance_valid(settings_overlay):
+        settings_overlay.queue_free()
+        settings_overlay = null
+        settings_label = null
+        return
+
+    settings_overlay = ColorRect.new()
+    settings_overlay.color = Color(0.02, 0.025, 0.04, 0.94)
+    settings_overlay.position = Vector2(300.0, 120.0)
+    settings_overlay.size = Vector2(680.0, 500.0)
+    add_child(settings_overlay)
+
+    settings_label = Label.new()
+    settings_label.position = Vector2(35.0, 30.0)
+    settings_label.size = Vector2(600.0, 80.0)
+    settings_label.add_theme_font_size_override("font_size", 28)
+    settings_overlay.add_child(settings_label)
+
+    var sensitivity_label := Label.new()
+    sensitivity_label.text = "Steering Sensitivity"
+    sensitivity_label.position = Vector2(35.0, 130.0)
+    sensitivity_label.add_theme_font_size_override("font_size", 22)
+    settings_overlay.add_child(sensitivity_label)
+
+    var sensitivity_slider := HSlider.new()
+    sensitivity_slider.position = Vector2(35.0, 175.0)
+    sensitivity_slider.size = Vector2(560.0, 40.0)
+    sensitivity_slider.min_value = 0.5
+    sensitivity_slider.max_value = 1.8
+    sensitivity_slider.step = 0.05
+    sensitivity_slider.value = steering_sensitivity
+    sensitivity_slider.value_changed.connect(_on_sensitivity_changed)
+    settings_overlay.add_child(sensitivity_slider)
+
+    var volume_label := Label.new()
+    volume_label.text = "Master Volume"
+    volume_label.position = Vector2(35.0, 235.0)
+    volume_label.add_theme_font_size_override("font_size", 22)
+    settings_overlay.add_child(volume_label)
+
+    var volume_slider := HSlider.new()
+    volume_slider.position = Vector2(35.0, 280.0)
+    volume_slider.size = Vector2(560.0, 40.0)
+    volume_slider.min_value = 0.0
+    volume_slider.max_value = 1.0
+    volume_slider.step = 0.05
+    volume_slider.value = master_volume
+    volume_slider.value_changed.connect(_on_master_volume_changed)
+    settings_overlay.add_child(volume_slider)
+
+    var close_button := Button.new()
+    close_button.text = "CLOSE"
+    close_button.position = Vector2(500.0, 410.0)
+    close_button.size = Vector2(120.0, 48.0)
+    close_button.pressed.connect(_show_settings)
+    settings_overlay.add_child(close_button)
+
+    _update_settings_label()
+
+func _update_settings_label() -> void:
+    if settings_label and is_instance_valid(settings_label):
+        settings_label.text = "SETTINGS\n\nSensitivity: %.2f\nVolume: %d%%\nQuality: %s" % [steering_sensitivity, int(master_volume * 100.0), graphics_quality]
+
+func _on_sensitivity_changed(value: float) -> void:
+    steering_sensitivity = value
+    var car := get_node_or_null("PlayerCar")
+    if car:
+        car.steering_sensitivity = value
+    _save_settings()
+    _update_settings_label()
+
+func _on_master_volume_changed(value: float) -> void:
+    master_volume = value
+    AudioServer.set_bus_volume_db(0, linear_to_db(maxf(master_volume, 0.001)))
+    _save_settings()
+    _update_settings_label()
+
+func _save_settings() -> void:
+    var data := {
+        "graphics_quality": graphics_quality,
+        "master_volume": master_volume,
+        "steering_sensitivity": steering_sensitivity,
+        "vibration_enabled": vibration_enabled
+    }
+    var file := FileAccess.open(settings_path, FileAccess.WRITE)
+    if file:
+        file.store_string(JSON.stringify(data))
 
 func _build_leaderboard_button() -> void:
     var button := Button.new()
