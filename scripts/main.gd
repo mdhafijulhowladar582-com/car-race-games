@@ -146,18 +146,59 @@ func _create_ambience() -> AudioStreamWAV:
 func _build_environment() -> void:
     var world := WorldEnvironment.new()
     var environment := Environment.new()
-    environment.background_mode = Environment.BG_COLOR
-    environment.background_color = Color(0.08, 0.1, 0.14)
-    environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-    environment.ambient_light_color = Color(0.55, 0.6, 0.7)
-    environment.ambient_light_energy = 0.8
+    environment.background_mode = Environment.BG_SKY
+    var sky := Sky.new()
+    var sky_material := ProceduralSkyMaterial.new()
+    sky_material.sky_top_color = Color(0.025, 0.07, 0.18)
+    sky_material.sky_horizon_color = Color(0.62, 0.72, 0.82)
+    sky_material.ground_bottom_color = Color(0.025, 0.035, 0.045)
+    sky_material.ground_horizon_color = Color(0.24, 0.28, 0.3)
+    sky_material.sun_angle_max = 12.0
+    sky_material.sun_curve = 0.08
+    sky.sky_material = sky_material
+    environment.sky = sky
+    environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+    environment.ambient_light_energy = 0.72
+    environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+    environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+    environment.glow_enabled = true
+    environment.glow_intensity = 0.7
+    environment.glow_strength = 1.0
+    environment.glow_bloom = 0.12
+    environment.volumetric_fog_enabled = true
+    environment.volumetric_fog_density = 0.008
+    environment.volumetric_fog_albedo = Color(0.55, 0.62, 0.7)
     world.environment = environment
     add_child(world)
 
-    var light := DirectionalLight3D.new()
-    light.rotation_degrees = Vector3(-55.0, -25.0, 0.0)
-    light.light_energy = 1.2
-    add_child(light)
+    var sun := DirectionalLight3D.new()
+    sun.name = "SunLight"
+    sun.rotation_degrees = Vector3(-48.0, -32.0, 0.0)
+    sun.light_color = Color(1.0, 0.92, 0.78)
+    sun.light_energy = 1.45
+    sun.shadow_enabled = true
+    sun.directional_shadow_max_distance = 90.0
+    sun.directional_shadow_fade_start = 55.0
+    sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+    add_child(sun)
+
+    var fill := DirectionalLight3D.new()
+    fill.name = "SkyFillLight"
+    fill.rotation_degrees = Vector3(-25.0, 145.0, 0.0)
+    fill.light_color = Color(0.55, 0.68, 1.0)
+    fill.light_energy = 0.28
+    fill.shadow_enabled = false
+    add_child(fill)
+
+    for position in [Vector3(-6.8, 3.0, 2.0), Vector3(12.0, 3.2, -26.0), Vector3(-7.5, 3.4, -48.0)]:
+        var lamp := OmniLight3D.new()
+        lamp.name = "TrackLight"
+        lamp.position = position
+        lamp.light_color = Color(1.0, 0.72, 0.38)
+        lamp.light_energy = 1.8
+        lamp.omni_range = 10.0
+        lamp.shadow_enabled = true
+        add_child(lamp)
 
 func _build_professional_environment() -> void:
     var road_side := _make_material(Color(0.16, 0.19, 0.17), 0.0, 0.9)
