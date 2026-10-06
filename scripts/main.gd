@@ -114,6 +114,18 @@ func _load_progress() -> void:
     if data.has("achievements"):
         achievements = Array(data["achievements"])
 
+func _save_progress() -> void:
+    var data := {
+        "coins": coins,
+        "xp": xp,
+        "total_races": total_races,
+        "best_time": best_time,
+        "achievements": achievements
+    }
+    var file := FileAccess.open(save_path, FileAccess.WRITE)
+    if file:
+        file.store_string(JSON.stringify(data))
+
 func _load_settings() -> void:
     var file := FileAccess.open(settings_path, FileAccess.READ)
     if file == null:
@@ -209,14 +221,8 @@ func _physics_process(delta: float) -> void:
     if position_label:
         position_label.text = "POSITION %d/%d" % [player_race_position, ai_opponents.size() + 1]
 
-    if car.global_position.z <= finish_z:
-        race_finished = true
-        race_started = false
-        if race_label:
-            race_label.text = "FINISH"
-        for ai in ai_opponents:
-            if is_instance_valid(ai):
-                ai.race_active = false
+    if progress >= 1.0 or car.global_position.z <= finish_z:
+        _finish_race()
 
 func _build_mobile_controls() -> void:
     mobile_controls = CanvasLayer.new()
@@ -252,6 +258,74 @@ func _add_touch_button(parent: Control, label_text: String, button_position: Vec
         Input.action_release(action_name)
     )
     parent.add_child(button)
+
+func _finish_race() -> void:
+    if race_finished:
+        return
+    race_finished = true
+    race_started = false
+    var car := get_node_or_null("PlayerCar")
+    if car:
+        car.speed = 0.0
+        car.velocity = Vector3.ZERO
+    for ai in ai_opponents:
+        if is_instance_valid(ai):
+            ai.race_active = false
+
+    total_races += 1
+    var reward_coins := max(10, 60 - (player_race_position - 1) * 10)
+    var reward_xp := max(25, 100 - (player_race_position - 1) * 15)
+    coins += reward_coins
+    xp += reward_xp
+    if player_race_position == 1:
+        career_wins += 1
+        career_stars += 3
+    elif player_race_position == 2:
+        career_stars += 2
+    elif player_race_position == 3:
+        career_stars += 1
+    career_races += 1
+    if best_time <= 0.0 or race_elapsed < best_time:
+        best_time = race_elapsed
+    _save_progress()
+    _update_rewards_hud()
+    if race_label:
+        race_label.text = "FINISH"
+    _show_race_results(reward_coins, reward_xp)
+
+func _show_race_results(reward_coins: int, reward_xp: int) -> void:
+    if results_canvas and is_instance_valid(results_canvas):
+        results_canvas.queue_free()
+    results_canvas = CanvasLayer.new()
+    add_child(results_canvas)
+
+    var overlay := ColorRect.new()
+    overlay.color = Color(0.0, 0.0, 0.0, 0.78)
+    overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+    results_canvas.add_child(overlay)
+
+    var title := Label.new()
+    title.text = "RACE COMPLETE"
+    title.position = Vector2(470.0, 120.0)
+    title.add_theme_font_size_override("font_size", 42)
+    overlay.add_child(title)
+
+    result_time_label = Label.new()
+    var minutes := int(race_elapsed / 60.0)
+    var seconds := fmod(race_elapsed, 60.0)
+    result_time_label.text = "TIME %02d:%05.2f\nPOSITION %d/%d\n+%d COINS\n+%d XP" % [minutes, seconds, player_race_position, ai_opponents.size() + 1, reward_coins, reward_xp]
+    result_time_label.position = Vector2(470.0, 200.0)
+    result_time_label.add_theme_font_size_override("font_size", 24)
+    overlay.add_child(result_time_label)
+
+    var restart := Button.new()
+    restart.text = "NEXT RACE"
+    restart.position = Vector2(510.0, 400.0)
+    restart.size = Vector2(260.0, 60.0)
+    restart.pressed.connect(func() -> void:
+        get_tree().reload_current_scene()
+    )
+    overlay.add_child(restart)
 
 func _build_health_hud() -> void:
     var canvas := CanvasLayer.new()
