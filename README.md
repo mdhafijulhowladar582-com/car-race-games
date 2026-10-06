@@ -1,3 +1,15 @@
+## Save System
+
+- Persistent JSON save file stored in Godot user storage
+- Saves coins and XP
+- Saves selected car, color, wheel style and upgrade level
+- Saves selected game mode, weather and map
+- Saves total completed races and best race time
+- Saves achievement flags
+- Progress loads automatically when the game starts
+- Save is updated automatically after a completed race
+- Save data is local to the device and does not require an online account
+
 # Car Race Games
 
 Godot 4.x 3D car racing game for Android and PC.
