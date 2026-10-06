@@ -168,6 +168,7 @@ func _ready() -> void:
     _build_professional_mobile_hud()
     _build_weather_select()
     _build_map_select()
+    _build_car_select_button()
     _build_settings_button()
     _build_leaderboard_button()
     _setup_online_leaderboard()
@@ -1744,6 +1745,42 @@ func _add_curve_apex_marker(position: Vector3) -> void:
     marker.position = position + Vector3(0.0, 0.45, 0.0)
     marker.material_override = _make_emission_material(Color(1.0, 0.28, 0.05), 0.7)
     add_child(marker)
+
+func _build_car_select_button() -> void:
+    var button := Button.new()
+    button.text = "CARS"
+    button.position = Vector2(1035.0, 12.0)
+    button.size = Vector2(115.0, 42.0)
+    button.pressed.connect(_show_car_selector)
+    add_child(button)
+
+func _show_car_selector() -> void:
+    var overlay := ColorRect.new()
+    overlay.name = "CarSelectorOverlay"
+    overlay.color = Color(0.02, 0.025, 0.04, 0.96)
+    overlay.position = Vector2(300.0, 80.0)
+    overlay.size = Vector2(680.0, 560.0)
+    add_child(overlay)
+
+    var title := Label.new()
+    title.text = "GARAGE / CAR SELECT"
+    title.position = Vector2(210.0, 20.0)
+    title.add_theme_font_size_override("font_size", 28)
+    overlay.add_child(title)
+
+    var content := Control.new()
+    content.position = Vector2(340.0, 300.0)
+    overlay.add_child(content)
+    _build_car_select(content)
+
+    var close := Button.new()
+    close.text = "CLOSE"
+    close.position = Vector2(280.0, 500.0)
+    close.size = Vector2(120.0, 42.0)
+    close.pressed.connect(func() -> void:
+        overlay.queue_free()
+    )
+    overlay.add_child(close)
 
 func _build_car_select(parent: Control) -> void:
     car_label = Label.new()
