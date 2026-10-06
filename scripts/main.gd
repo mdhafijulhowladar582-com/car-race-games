@@ -31,6 +31,9 @@ var ai_opponents: Array[Node3D] = []
 var ai_count := 3
 var ai_skill_profiles := [0.94, 1.0, 1.06]
 var ai_racing_offsets := [-1.8, 0.0, 1.8]
+var ai_race_progress: Array[float] = []
+var ai_last_positions: Array[int] = []
+var player_race_position := 1
 var ai_lap_progress: Array[int] = []
 var ambience_player: AudioStreamPlayer3D
 var race_finished := false
@@ -107,6 +110,7 @@ func _ready() -> void:
     _build_leaderboard_button()
     _update_map_label()
     _update_rewards_hud()
+    _update_ai_racing(0.0)
 
     var car := get_node_or_null("PlayerCar")
     if car:
@@ -1491,6 +1495,50 @@ func _update_ai_racing_behavior() -> void:
         if ai_script.has_method("set_racing_offset"):
             ai_script.set_racing_offset(ai_racing_offsets[min(i, ai_racing_offsets.size() - 1)])
 
+func _update_ai_racing(delta: float) -> void:
+    if ai_opponents.is_empty():
+        return
+    for i in ai_opponents.size():
+        var ai := ai_opponents[i]
+        if not is_instance_valid(ai):
+            continue
+        var progress := _race_progress_for_position(ai.global_position)
+        if ai_race_progress.size() <= i:
+            ai_race_progress.append(progress)
+        else:
+            ai_race_progress[i] = progress
+    var player := get_node_or_null("PlayerCar")
+    var player_progress := 0.0
+    if player:
+        player_progress = _race_progress_for_position(player.global_position)
+    var ahead := 0
+    for progress in ai_race_progress:
+        if progress > player_progress:
+            ahead += 1
+    player_race_position = clamp(ahead + 1, 1, ai_opponents.size() + 1)
+    if is_instance_valid(position_label) and race_started and not race_finished:
+        position_label.text = "POSITION  %d/%d" % [player_race_position, ai_opponents.size() + 1]
+
+func _race_progress_for_position(position: Vector3) -> float:
+    if track_path.size() < 2:
+        return -position.z
+    var best_distance := INF
+    var best_progress := 0.0
+    var accumulated := 0.0
+    for i in track_path.size() - 1:
+        var a := track_path[i]
+        var b := track_path[i + 1]
+        var segment := b - a
+        var length := max(segment.length(), 0.001)
+        var t := clamp((position - a).dot(segment) / (length * length), 0.0, 1.0)
+        var closest := a.lerp(b, t)
+        var distance := position.distance_squared_to(closest)
+        if distance < best_distance:
+            best_distance = distance
+            best_progress = accumulated + length * t
+        accumulated += length
+    return best_progress
+
 func _build_ai_opponents() -> void:
     var route: Array[Vector3] = track_path.duplicate()
     var ai_script := load("res://scripts/ai_car.gd")
@@ -1657,6 +1705,7 @@ func _add_finish_line() -> void:
     finish.body_entered.connect(_on_finish_body_entered)
 
 func _process(delta: float) -> void:
+    _update_ai_racing(delta)
     if race_finished:
         return
 
