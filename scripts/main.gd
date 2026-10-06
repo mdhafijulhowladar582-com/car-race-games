@@ -2214,7 +2214,9 @@ func _add_car_button(parent: Control, car_name: String, button_position: Vector2
     button.size = Vector2(160.0, 55.0)
     button.pressed.connect(func() -> void:
         selected_car = car_name
+        _apply_selected_car_to_player()
         _update_car_selection_label()
+        _save_progress()
     )
     parent.add_child(button)
 
@@ -2248,6 +2250,15 @@ func _apply_customization(action_name: String) -> void:
         _:
             return
     _update_car_selection_label()
+
+func _apply_selected_car_to_player() -> void:
+    var car := get_node_or_null("PlayerCar")
+    if car == null:
+        return
+    if car.has_method("configure_car"):
+        car.configure_car(selected_car)
+    if car.has_method("customize_car"):
+        car.customize_car(selected_color, selected_wheels, upgrade_level)
 
 func _update_car_selection_label() -> void:
     var stats := {
