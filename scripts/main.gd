@@ -701,7 +701,9 @@ func _show_map_selector() -> void:
     close.position = Vector2(150.0, 315.0)
     close.size = Vector2(120.0, 45.0)
     close.pressed.connect(func() -> void:
-        overlay.queue_free()
+        if is_instance_valid(garage_overlay):
+            garage_overlay.queue_free()
+        garage_overlay = null
     )
     overlay.add_child(close)
 
@@ -1755,8 +1757,14 @@ func _build_car_select_button() -> void:
     add_child(button)
 
 func _show_car_selector() -> void:
+    if garage_overlay and is_instance_valid(garage_overlay):
+        garage_overlay.queue_free()
+        garage_overlay = null
+        return
+
     var overlay := ColorRect.new()
     overlay.name = "CarSelectorOverlay"
+    garage_overlay = overlay
     overlay.color = Color(0.02, 0.025, 0.04, 0.96)
     overlay.position = Vector2(300.0, 80.0)
     overlay.size = Vector2(680.0, 560.0)
