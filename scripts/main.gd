@@ -63,6 +63,9 @@ var master_volume := 1.0
 var steering_sensitivity := 1.0
 var vibration_enabled := true
 var settings_path := "user://car_race_settings.json"
+var leaderboard_overlay: ColorRect
+var leaderboard_label: Label
+var leaderboard_entries: Array = []
 
 var race_start_z := 15.0
 var finish_z := -66.0
@@ -89,6 +92,7 @@ func _ready() -> void:
     _build_weather_select()
     _build_map_select()
     _build_settings_button()
+    _build_leaderboard_button()
     _update_map_label()
     _update_rewards_hud()
 
@@ -878,6 +882,69 @@ func _update_map_label() -> void:
     if is_instance_valid(map_label):
         map_label.text = "MAP: " + selected_map
 
+
+
+func _build_leaderboard_button() -> void:
+    var button := Button.new()
+    button.text = "LEADERBOARD"
+    button.position = Vector2(1110.0, 540.0)
+    button.size = Vector2(150.0, 58.0)
+    button.focus_mode = Control.FOCUS_NONE
+    button.pressed.connect(_open_leaderboard)
+    mode_overlay.add_child(button)
+
+func _update_leaderboard() -> void:
+    var entry := {"time": race_elapsed, "mode": selected_mode, "map": selected_map, "weather": selected_weather}
+    leaderboard_entries.append(entry)
+    leaderboard_entries.sort_custom(func(a, b): return float(a.get("time", 999999.0)) < float(b.get("time", 999999.0)))
+    if leaderboard_entries.size() > 10:
+        leaderboard_entries.resize(10)
+
+func _open_leaderboard() -> void:
+    leaderboard_overlay = ColorRect.new()
+    leaderboard_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    leaderboard_overlay.color = Color(0.01, 0.015, 0.025, 0.97)
+    leaderboard_overlay.z_index = 60
+    mode_overlay.add_child(leaderboard_overlay)
+    var title := Label.new()
+    title.text = "LEADERBOARD"
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title.position = Vector2(390.0, 35.0)
+    title.size = Vector2(500.0, 60.0)
+    title.add_theme_font_size_override("font_size", 38)
+    leaderboard_overlay.add_child(title)
+    leaderboard_label = Label.new()
+    leaderboard_label.position = Vector2(280.0, 105.0)
+    leaderboard_label.size = Vector2(720.0, 390.0)
+    leaderboard_label.add_theme_font_size_override("font_size", 20)
+    leaderboard_overlay.add_child(leaderboard_label)
+    var summary := "BEST TIME: " + ("--" if best_time <= 0.0 else _format_time(best_time)) + "\nTOTAL RACES: %d\nCOINS: %d   XP: %d\n\n" % [total_races, coins, xp]
+    var rows := ""
+    for i in range(leaderboard_entries.size()):
+        var e = leaderboard_entries[i]
+        rows += "%d. %s   %s   %s\n" % [i + 1, _format_time(float(e.get("time", 0.0))), str(e.get("mode", "quick_race")).to_upper(), str(e.get("map", "CITY")).to_upper()]
+    if rows == "":
+        rows = "No completed races yet.\nFinish a race to create your first local entry."
+    leaderboard_label.text = summary + rows
+    var back := Button.new()
+    back.text = "BACK"
+    back.position = Vector2(490.0, 540.0)
+    back.size = Vector2(300.0, 58.0)
+    back.focus_mode = Control.FOCUS_NONE
+    back.pressed.connect(_close_leaderboard)
+    leaderboard_overlay.add_child(back)
+
+func _close_leaderboard() -> void:
+    if is_instance_valid(leaderboard_overlay):
+        leaderboard_overlay.queue_free()
+        leaderboard_overlay = null
+
+func _format_time(value: float) -> String:
+    var total_seconds := max(0, int(value))
+    var minutes := total_seconds / 60
+    var seconds := total_seconds % 60
+    var hundredths := int((value - floor(value)) * 100.0)
+    return "%02d:%02d.%02d" % [minutes, seconds, hundredths]
 
 func _build_settings_button() -> void:
     var button := Button.new()
@@ -1676,6 +1743,7 @@ func _grant_race_rewards() -> void:
         achievements.append("FIRST_RACE")
     if coins >= 500 and not achievements.has("500_COINS"):
         achievements.append("500_COINS")
+    _update_leaderboard()
     _save_progress()
     _update_rewards_hud()
 
@@ -1692,7 +1760,8 @@ func _save_progress() -> void:
         "selected_map": selected_map,
         "total_races": total_races,
         "best_time": best_time,
-        "achievements": achievements
+        "achievements": achievements,
+        "leaderboard_entries": leaderboard_entries
     }
     var file := FileAccess.open(save_path, FileAccess.WRITE)
     if file:
@@ -1718,6 +1787,7 @@ func _load_progress() -> void:
     total_races = int(parsed.get("total_races", 0))
     best_time = float(parsed.get("best_time", 0.0))
     achievements = Array(parsed.get("achievements", []))
+    leaderboard_entries = Array(parsed.get("leaderboard_entries", []))
     var color_data = parsed.get("selected_color", [0.82, 0.025, 0.02, 1.0])
     if color_data is Array and color_data.size() >= 4:
         selected_color = Color(float(color_data[0]), float(color_data[1]), float(color_data[2]), float(color_data[3]))
