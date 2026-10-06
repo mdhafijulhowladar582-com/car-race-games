@@ -31,6 +31,11 @@ var engine_player: AudioStreamPlayer3D
 var brake_player: AudioStreamPlayer3D
 var crash_player: AudioStreamPlayer3D
 var game_over_player: AudioStreamPlayer3D
+var dust_particles: Array[CPUParticles3D] = []
+var smoke_particles: CPUParticles3D
+var spark_particles: CPUParticles3D
+var skid_marks: Array[MeshInstance3D] = []
+var crash_light: OmniLight3D
 
 signal health_changed(current_health: float, maximum_health: float)
 signal game_over
@@ -40,6 +45,7 @@ func _ready() -> void:
     health = max_health
     _build_car()
     _build_audio()
+    _build_effects()
     health_changed.emit(health, max_health)
 
 func _physics_process(delta: float) -> void:
@@ -50,6 +56,7 @@ func _physics_process(delta: float) -> void:
         steering = move_toward(steering, 0.0, steering_response * delta)
         _apply_movement(delta)
         _update_engine_audio(delta)
+        _update_effects()
         return
 
     var throttle := Input.get_axis("brake", "accelerate")
@@ -59,6 +66,7 @@ func _physics_process(delta: float) -> void:
     _update_steering(steer_input, delta)
     _apply_movement(delta)
     _update_engine_audio(delta)
+    _update_effects()
 
     if Input.is_action_pressed("brake") and abs(speed) > 1.0:
         _play_brake_audio()
@@ -105,7 +113,127 @@ func _apply_movement(delta: float) -> void:
                 var damage := clamp(impact_speed * 0.9, collision_damage * 0.5, collision_damage * 2.0)
                 take_damage(damage)
                 crash_impact.emit()
+                _trigger_crash_effect(impact_speed)
                 _play_crash_audio()
+
+func _build_effects() -> void:
+    var dust_material := ParticleProcessMaterial.new()
+    dust_material.direction = Vector3(0.0, 0.7, 0.15)
+    dust_material.spread = 55.0
+    dust_material.gravity = Vector3(0.0, 1.5, 0.0)
+    dust_material.initial_velocity_min = 1.0
+    dust_material.initial_velocity_max = 3.0
+    dust_material.scale_min = 0.18
+    dust_material.scale_max = 0.42
+    dust_material.color = Color(0.34, 0.29, 0.22, 0.5)
+
+    for pos in [Vector3(-0.82, -0.42, 1.25), Vector3(0.82, -0.42, 1.25)]:
+        var dust := CPUParticles3D.new()
+        dust.name = "Dust"
+        dust.position = pos
+        dust.amount = 12
+        dust.lifetime = 0.55
+        dust.randomness = 0.45
+        dust.local_coords = false
+        dust.emitting = false
+        dust.process_material = dust_material
+        dust.mesh = _particle_sphere(0.18)
+        add_child(dust)
+        dust_particles.append(dust)
+
+    var smoke_material := ParticleProcessMaterial.new()
+    smoke_material.direction = Vector3(0.0, 1.0, 0.0)
+    smoke_material.spread = 30.0
+    smoke_material.gravity = Vector3(0.0, 0.7, 0.0)
+    smoke_material.initial_velocity_min = 0.3
+    smoke_material.initial_velocity_max = 1.1
+    smoke_material.scale_min = 0.28
+    smoke_material.scale_max = 0.62
+    smoke_material.color = Color(0.16, 0.16, 0.18, 0.42)
+
+    smoke_particles = CPUParticles3D.new()
+    smoke_particles.name = "DamageSmoke"
+    smoke_particles.position = Vector3(0.0, 0.05, 1.7)
+    smoke_particles.amount = 10
+    smoke_particles.lifetime = 1.2
+    smoke_particles.randomness = 0.6
+    smoke_particles.emitting = false
+    smoke_particles.process_material = smoke_material
+    smoke_particles.mesh = _particle_sphere(0.22)
+    add_child(smoke_particles)
+
+    var spark_material := ParticleProcessMaterial.new()
+    spark_material.direction = Vector3(0.0, 0.7, 0.0)
+    spark_material.spread = 70.0
+    spark_material.gravity = Vector3(0.0, -5.0, 0.0)
+    spark_material.initial_velocity_min = 4.0
+    spark_material.initial_velocity_max = 9.0
+    spark_material.scale_min = 0.05
+    spark_material.scale_max = 0.12
+    spark_material.color = Color(1.0, 0.48, 0.06, 1.0)
+
+    spark_particles = CPUParticles3D.new()
+    spark_particles.name = "CollisionSparks"
+    spark_particles.amount = 20
+    spark_particles.lifetime = 0.35
+    spark_particles.one_shot = true
+    spark_particles.explosiveness = 0.9
+    spark_particles.emitting = false
+    spark_particles.process_material = spark_material
+    spark_particles.mesh = _particle_sphere(0.08)
+    add_child(spark_particles)
+
+    crash_light = OmniLight3D.new()
+    crash_light.name = "CrashFlash"
+    crash_light.light_color = Color(1.0, 0.45, 0.12)
+    crash_light.light_energy = 0.0
+    crash_light.omni_range = 5.0
+    add_child(crash_light)
+
+    for pos in [Vector3(-0.82, -0.44, 0.95), Vector3(0.82, -0.44, 0.95)]:
+        var mark := MeshInstance3D.new()
+        var mark_mesh := BoxMesh.new()
+        mark_mesh.size = Vector3(0.34, 0.015, 1.25)
+        mark.mesh = mark_mesh
+        mark.position = pos
+        mark.material_override = _material(Color(0.025, 0.025, 0.025, 0.55), 0.0, 1.0)
+        mark.visible = false
+        add_child(mark)
+        skid_marks.append(mark)
+
+func _particle_sphere(radius: float) -> SphereMesh:
+    var mesh := SphereMesh.new()
+    mesh.radius = radius
+    mesh.height = radius * 2.0
+    return mesh
+
+func _update_effects() -> void:
+    var moving := abs(speed) > 5.0
+    var braking_now := Input.is_action_pressed("brake") and abs(speed) > 4.0
+    var steering_now := abs(steering) > 0.55 and abs(speed) > 9.0
+    var skid_active := braking_now or steering_now
+
+    for dust in dust_particles:
+        dust.emitting = moving and (braking_now or steering_now)
+
+    for mark in skid_marks:
+        mark.visible = skid_active
+
+    if is_instance_valid(smoke_particles):
+        smoke_particles.emitting = health <= max_health * 0.45 and not is_game_over
+
+func _trigger_crash_effect(impact_speed: float) -> void:
+    if not is_instance_valid(spark_particles):
+        return
+
+    spark_particles.position = Vector3(0.0, 0.1, -0.8)
+    spark_particles.emitting = false
+    spark_particles.restart()
+
+    if is_instance_valid(crash_light):
+        crash_light.light_energy = clamp(impact_speed * 0.18, 0.8, 3.0)
+        var tween := create_tween()
+        tween.tween_property(crash_light, "light_energy", 0.0, 0.16)
 
 func _build_audio() -> void:
     engine_player = AudioStreamPlayer3D.new()
