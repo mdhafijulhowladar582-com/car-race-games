@@ -83,6 +83,7 @@ var leaderboard_entries: Array = []
 var online_leaderboard_url := ""
 var leaderboard_http: HTTPRequest
 var online_leaderboard_status := "OFFLINE"
+var firebase_service: Node
 var career_level := 1
 var career_wins := 0
 var career_races := 0
@@ -177,7 +178,7 @@ func _ready() -> void:
     _build_car_select_button()
     _build_settings_button()
     _build_leaderboard_button()
-    _setup_online_leaderboard()
+    _setup_firebase_service()
     _update_map_label()
     _update_rewards_hud()
     _update_ai_racing(0.0)
@@ -938,12 +939,13 @@ func _build_leaderboard_button() -> void:
     button.pressed.connect(_show_leaderboard)
     add_child(button)
 
-func _setup_online_leaderboard() -> void:
-    leaderboard_http = HTTPRequest.new()
-    leaderboard_http.name = "LeaderboardHTTP"
-    add_child(leaderboard_http)
-    leaderboard_http.request_completed.connect(_on_leaderboard_request_completed)
-    online_leaderboard_status = "OFFLINE"
+func _setup_firebase_service() -> void:
+    firebase_service = preload("res://scripts/firebase_service.gd").new()
+    add_child(firebase_service)
+    firebase_service.leaderboard_loaded.connect(_on_firebase_leaderboard_loaded)
+    firebase_service.leaderboard_failed.connect(_on_firebase_leaderboard_failed)
+    online_leaderboard_status = "CONNECTING"
+    firebase_service.load_public_leaderboard()
 
 func _show_leaderboard() -> void:
     if leaderboard_overlay and is_instance_valid(leaderboard_overlay):
@@ -1008,17 +1010,17 @@ func _leaderboard_time_value(entry: Variant) -> float:
             return float(parts[0]) * 60.0 + float(parts[1])
     return float(time_text) if time_text.is_valid_float() else INF
 
-func _on_leaderboard_request_completed(_result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
-    if response_code < 200 or response_code >= 300:
-        online_leaderboard_status = "OFFLINE"
-        return
+func _on_firebase_leaderboard_loaded(entries: Array) -> void:
+    leaderboard_entries = entries
+    online_leaderboard_status = "ONLINE"
+    if leaderboard_label and is_instance_valid(leaderboard_label):
+        _refresh_leaderboard()
 
-    var parsed = JSON.parse_string(body.get_string_from_utf8())
-    if parsed is Array:
-        leaderboard_entries = parsed
-        online_leaderboard_status = "ONLINE"
-        if leaderboard_label and is_instance_valid(leaderboard_label):
-            _refresh_leaderboard()
+func _on_firebase_leaderboard_failed(message: String) -> void:
+    online_leaderboard_status = "OFFLINE"
+    if leaderboard_label and is_instance_valid(leaderboard_label):
+        _refresh_leaderboard()
+        leaderboard_label.text += "\n\nFirebase: %s" % message
 
 func _update_map_label() -> void:
     if map_label:
