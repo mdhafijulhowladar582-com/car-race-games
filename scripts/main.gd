@@ -15,6 +15,8 @@ var timer_label: Label
 var position_label: Label
 var checkpoint_label: Label
 var result_time_label: Label
+var ai_opponents: Array[CharacterBody3D] = []
+var ai_count := 3
 var ambience_player: AudioStreamPlayer3D
 var race_finished := false
 var race_started := false
@@ -37,6 +39,7 @@ func _ready() -> void:
     _build_mobile_controls()
     _build_health_hud()
     _build_race_system()
+    _build_ai_opponents()
     _build_game_over_ui()
     _start_race_countdown()
 
@@ -713,9 +716,46 @@ func _countdown_step() -> void:
     else:
         countdown_label.text = "GO!"
         race_started = true
+        for ai in ai_opponents:
+            if is_instance_valid(ai) and ai.has_method("start_race"):
+                ai.start_race()
         var tween := create_tween()
         tween.tween_property(countdown_label, "modulate:a", 0.0, 0.6)
         tween.finished.connect(countdown_label.queue_free)
+
+func _build_ai_opponents() -> void:
+    var route: Array[Vector3] = [
+        Vector3(0.0, 0.95, 6.0),
+        Vector3(0.0, 0.95, -8.0),
+        Vector3(2.0, 1.05, -24.0),
+        Vector3(6.0, 1.25, -39.0),
+        Vector3(9.0, 1.5, -52.0),
+        Vector3(10.0, 1.8, -65.0)
+    ]
+    var ai_script := load("res://scripts/ai_car.gd")
+    for i in range(ai_count):
+        var ai := CharacterBody3D.new()
+        ai.name = "AIOpponent%d" % (i + 1)
+        ai.position = Vector3(-3.0 + i * 3.0, 1.0, 19.0 + i * 2.0)
+        ai.set_script(ai_script)
+        add_child(ai)
+        ai.setup(route)
+        ai_opponents.append(ai)
+
+func _get_player_position_rank() -> int:
+    var player := get_node_or_null("PlayerCar")
+    if not player:
+        return 1
+    var player_progress := _race_progress_for_z(player.global_position.z)
+    var rank := 1
+    for ai in ai_opponents:
+        if is_instance_valid(ai):
+            if _race_progress_for_z(ai.global_position.z) > player_progress:
+                rank += 1
+    return rank
+
+func _race_progress_for_z(z_value: float) -> float:
+    return clamp((race_start_z - z_value) / max(abs(finish_z - race_start_z), 0.01), 0.0, 1.0)
 
 func _build_race_system() -> void:
     _add_finish_line()
@@ -868,10 +908,16 @@ func _process(delta: float) -> void:
     if is_instance_valid(timer_label):
         timer_label.text = "TIME " + _format_race_time(race_elapsed)
     if is_instance_valid(position_label):
-        position_label.text = "POSITION 1 / 1"
+        position_label.text = "POSITION %d / %d" % [_get_player_position_rank(), ai_opponents.size() + 1]
     var lap_label := get_node_or_null("RaceHUD/LapInfo") as Label
     if is_instance_valid(lap_label):
         lap_label.text = "LAP %d / %d" % [lap, total_laps]
+
+    for ai in ai_opponents:
+        if is_instance_valid(ai) and not ai.finished and ai.global_position.z <= finish_z:
+            ai.finished = true
+            ai.race_active = false
+            ai.velocity = Vector3.ZERO
 
     var distance_total := abs(finish_z - race_start_z)
     var distance_done := clamp(abs(race_start_z - car.global_position.z), 0.0, distance_total)
