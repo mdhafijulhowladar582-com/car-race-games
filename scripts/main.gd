@@ -904,23 +904,26 @@ func _build_car_select(parent: Control) -> void:
     _add_car_button(parent, "SPORTS", Vector2(-310.0, -45.0))
     _add_car_button(parent, "MUSCLE", Vector2(-105.0, -45.0))
     _add_car_button(parent, "GT", Vector2(100.0, -45.0))
+    _add_car_button(parent, "SUPERCAR", Vector2(-310.0, 25.0))
+    _add_car_button(parent, "HYPER", Vector2(-105.0, 25.0))
+    _add_car_button(parent, "RALLY", Vector2(100.0, 25.0))
 
     customization_label = Label.new()
     customization_label.text = "COLOR: RED   WHEELS: SPORT   UPGRADE: 0/3"
     customization_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     customization_label.set_anchors_preset(Control.PRESET_CENTER)
-    customization_label.position = Vector2(-360.0, -55.0)
+    customization_label.position = Vector2(-360.0, 95.0)
     customization_label.size = Vector2(720.0, 55.0)
     customization_label.add_theme_font_size_override("font_size", 19)
     parent.add_child(customization_label)
 
-    _add_custom_button(parent, "RED", Vector2(-310.0, 115.0), "color_red")
-    _add_custom_button(parent, "BLUE", Vector2(-105.0, 115.0), "color_blue")
-    _add_custom_button(parent, "GREEN", Vector2(100.0, 115.0), "color_green")
-    _add_custom_button(parent, "SPORT WHEELS", Vector2(-310.0, 180.0), "wheel_sport")
-    _add_custom_button(parent, "BLACK WHEELS", Vector2(-105.0, 180.0), "wheel_black")
-    _add_custom_button(parent, "GOLD WHEELS", Vector2(100.0, 180.0), "wheel_gold")
-    _add_custom_button(parent, "UPGRADE +", Vector2(-95.0, 245.0), "upgrade")
+    _add_custom_button(parent, "RED", Vector2(-310.0, 165.0), "color_red")
+    _add_custom_button(parent, "BLUE", Vector2(-105.0, 165.0), "color_blue")
+    _add_custom_button(parent, "GREEN", Vector2(100.0, 165.0), "color_green")
+    _add_custom_button(parent, "SPORT WHEELS", Vector2(-310.0, 225.0), "wheel_sport")
+    _add_custom_button(parent, "BLACK WHEELS", Vector2(-105.0, 225.0), "wheel_black")
+    _add_custom_button(parent, "GOLD WHEELS", Vector2(100.0, 225.0), "wheel_gold")
+    _add_custom_button(parent, "UPGRADE +", Vector2(-95.0, 285.0), "upgrade")
     _build_garage(parent)
 
 func _add_car_button(parent: Control, car_name: String, button_position: Vector2) -> void:
@@ -978,6 +981,12 @@ func _select_car(car_name: String) -> void:
         car_label.text = "CAR: MUSCLE\nSpeed 30 | Acceleration 20 | Handling 1.8"
     elif car_name == "GT":
         car_label.text = "CAR: GT\nSpeed 38 | Acceleration 16 | Handling 2.4"
+    elif car_name == "SUPERCAR":
+        car_label.text = "CAR: SUPERCAR\nSpeed 42 | Acceleration 19 | Handling 2.6"
+    elif car_name == "HYPER":
+        car_label.text = "CAR: HYPER\nSpeed 46 | Acceleration 17.5 | Handling 2.8"
+    elif car_name == "RALLY":
+        car_label.text = "CAR: RALLY\nSpeed 32 | Acceleration 22 | Handling 2.15"
     else:
         car_label.text = "CAR: SPORTS\nSpeed 34 | Acceleration 18 | Handling 2.2"
 
@@ -1347,7 +1356,13 @@ func _garage_speed() -> int:
         speed = 30
     elif selected_car == "GT":
         speed = 38
-    return speed + upgrade_level * 1.5
+    elif selected_car == "SUPERCAR":
+        speed = 42
+    elif selected_car == "HYPER":
+        speed = 46
+    elif selected_car == "RALLY":
+        speed = 32
+    return speed + int(upgrade_level * 1.5)
 
 func _garage_accel() -> int:
     var accel := 18
@@ -1355,13 +1370,25 @@ func _garage_accel() -> int:
         accel = 20
     elif selected_car == "GT":
         accel = 16
-    return accel + upgrade_level * 0.8
+    elif selected_car == "SUPERCAR":
+        accel = 19
+    elif selected_car == "HYPER":
+        accel = 17
+    elif selected_car == "RALLY":
+        accel = 22
+    return accel + int(upgrade_level * 0.8)
 
 func _garage_handling() -> float:
     if selected_car == "MUSCLE":
         return 1.8
     if selected_car == "GT":
         return 2.4
+    if selected_car == "SUPERCAR":
+        return 2.6
+    if selected_car == "HYPER":
+        return 2.8
+    if selected_car == "RALLY":
+        return 2.15
     return 2.2
 
 func _build_mode_select() -> void:
