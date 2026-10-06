@@ -775,11 +775,11 @@ func _sync_race_start_to_map() -> void:
 func _build_rewards_hud() -> void:
     reward_label = Label.new()
     reward_label.text = "Rewards"
-    reward_label.position = Vector2(950.0, 20.0)
+    reward_label.position = Vector2(20.0, 90.0)
     add_child(reward_label)
     coins_label = Label.new()
     coins_label.text = "Coins: 0"
-    coins_label.position = Vector2(950.0, 48.0)
+    coins_label.position = Vector2(20.0, 118.0)
     add_child(coins_label)
 
 func _build_professional_mobile_hud() -> void:
@@ -992,7 +992,7 @@ func _save_settings() -> void:
 func _build_leaderboard_button() -> void:
     var button := Button.new()
     button.text = "Leaderboard"
-    button.position = Vector2(1110.0, 70.0)
+    button.position = Vector2(1025.0, 65.0)
     button.size = Vector2(150.0, 52.0)
     button.pressed.connect(_show_leaderboard)
     add_child(button)
@@ -1004,14 +1004,14 @@ func _build_auth_ui() -> void:
     google_signin.signed_out.connect(_on_google_signed_out)
 
     auth_button = Button.new()
-    auth_button.position = Vector2(845.0, 20.0)
+    auth_button.position = Vector2(820.0, 65.0)
     auth_button.size = Vector2(175.0, 42.0)
     auth_button.text = "GOOGLE LOGIN"
     auth_button.pressed.connect(_on_auth_button_pressed)
     add_child(auth_button)
 
     auth_status_label = Label.new()
-    auth_status_label.position = Vector2(845.0, 62.0)
+    auth_status_label.position = Vector2(820.0, 107.0)
     auth_status_label.size = Vector2(175.0, 30.0)
     auth_status_label.text = "GUEST MODE"
     auth_status_label.add_theme_font_size_override("font_size", 14)
