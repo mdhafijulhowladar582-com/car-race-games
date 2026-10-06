@@ -1876,6 +1876,7 @@ func _update_car_selection_label() -> void:
         car_label.text = "CAR: %s\nSpeed %.0f | Acceleration %.1f | Handling %.1f" % [selected_car, speed_value, acceleration_value, handling_value]
     if customization_label:
         customization_label.text = "COLOR: %s   WHEELS: %s   UPGRADE: %d/3" % [_get_color_name(), selected_wheels, upgrade_level]
+    _update_garage_info()
 
 func _get_color_name() -> String:
     if selected_color.is_equal_approx(Color(0.04, 0.22, 0.88)):
@@ -1885,7 +1886,13 @@ func _get_color_name() -> String:
     return "RED"
 
 func _build_garage(parent: Control) -> void:
-    var label := Label.new()
-    label.text = "Garage"
-    label.position = Vector2(-20.0, 350.0)
-    parent.add_child(label)
+    garage_info_label = Label.new()
+    garage_info_label.text = "GARAGE\nSelected: %s\nColor: %s\nWheels: %s\nUpgrade: %d/3" % [selected_car, _get_color_name(), selected_wheels, upgrade_level]
+    garage_info_label.position = Vector2(-120.0, 340.0)
+    garage_info_label.size = Vector2(240.0, 120.0)
+    garage_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    parent.add_child(garage_info_label)
+
+func _update_garage_info() -> void:
+    if garage_info_label:
+        garage_info_label.text = "GARAGE\nSelected: %s\nColor: %s\nWheels: %s\nUpgrade: %d/3" % [selected_car, _get_color_name(), selected_wheels, upgrade_level]
