@@ -41,6 +41,10 @@ var lap := 1
 var total_laps := 1
 var coins := 0
 var xp := 0
+var save_path := "user://car_race_save.json"
+var total_races := 0
+var best_time := 0.0
+var achievements: Array[String] = []
 var selected_weather := "DAY"
 var selected_map := "CITY"
 var map_label: Label
@@ -57,6 +61,7 @@ var finish_z := -66.0
 
 
 func _ready() -> void:
+    _load_progress()
     _build_environment()
     _build_road()
     _build_environment_scenery()
@@ -75,6 +80,7 @@ func _ready() -> void:
     _build_weather_select()
     _build_map_select()
     _update_map_label()
+    _update_rewards_hud()
 
     var car := get_node_or_null("PlayerCar")
     if car:
@@ -1551,7 +1557,68 @@ func _grant_race_rewards() -> void:
     var reward := _calculate_race_reward()
     coins += reward[0]
     xp += reward[1]
+    total_races += 1
+    if best_time <= 0.0 or race_elapsed < best_time:
+        best_time = race_elapsed
+    if total_races >= 1 and not achievements.has("FIRST_RACE"):
+        achievements.append("FIRST_RACE")
+    if coins >= 500 and not achievements.has("500_COINS"):
+        achievements.append("500_COINS")
+    _save_progress()
     _update_rewards_hud()
+
+func _save_progress() -> void:
+    var data := {
+        "coins": coins,
+        "xp": xp,
+        "selected_mode": selected_mode,
+        "selected_car": selected_car,
+        "selected_color": [selected_color.r, selected_color.g, selected_color.b, selected_color.a],
+        "selected_wheels": selected_wheels,
+        "upgrade_level": upgrade_level,
+        "selected_weather": selected_weather,
+        "selected_map": selected_map,
+        "total_races": total_races,
+        "best_time": best_time,
+        "achievements": achievements
+    }
+    var file := FileAccess.open(save_path, FileAccess.WRITE)
+    if file:
+        file.store_string(JSON.stringify(data))
+
+func _load_progress() -> void:
+    if not FileAccess.file_exists(save_path):
+        return
+    var file := FileAccess.open(save_path, FileAccess.READ)
+    if not file:
+        return
+    var parsed = JSON.parse_string(file.get_as_text())
+    if typeof(parsed) != TYPE_DICTIONARY:
+        return
+    coins = int(parsed.get("coins", 0))
+    xp = int(parsed.get("xp", 0))
+    selected_mode = str(parsed.get("selected_mode", "quick_race"))
+    selected_car = str(parsed.get("selected_car", "SPORTS"))
+    selected_wheels = str(parsed.get("selected_wheels", "SPORT"))
+    upgrade_level = int(parsed.get("upgrade_level", 0))
+    selected_weather = str(parsed.get("selected_weather", "DAY"))
+    selected_map = str(parsed.get("selected_map", "CITY"))
+    total_races = int(parsed.get("total_races", 0))
+    best_time = float(parsed.get("best_time", 0.0))
+    achievements = Array(parsed.get("achievements", []))
+    var color_data = parsed.get("selected_color", [0.82, 0.025, 0.02, 1.0])
+    if color_data is Array and color_data.size() >= 4:
+        selected_color = Color(float(color_data[0]), float(color_data[1]), float(color_data[2]), float(color_data[3]))
+
+func _reset_saved_progress() -> void:
+    coins = 0
+    xp = 0
+    total_races = 0
+    best_time = 0.0
+    achievements.clear()
+    _save_progress()
+    _update_rewards_hud()
+
 
 func _build_health_hud() -> void:
     var canvas := CanvasLayer.new()
