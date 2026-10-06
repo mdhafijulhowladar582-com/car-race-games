@@ -337,8 +337,101 @@ func _apply_weather(weather: String) -> void:
 
 func _apply_map(map_name: String) -> void:
     selected_map = map_name
+    _rebuild_map()
     if map_label:
         map_label.text = "MAP: %s" % selected_map
+
+func _rebuild_map() -> void:
+    for child in get_children():
+        if child.name.begins_with("CurvedRoad") or child.name == "ApexMarker" or child.name == "MapEnvironment":
+            child.queue_free()
+
+    await get_tree().process_frame
+
+    _build_professional_track()
+    _build_map_environment()
+    _sync_race_start_to_map()
+
+func _build_map_environment() -> void:
+    var environment_root := Node3D.new()
+    environment_root.name = "MapEnvironment"
+    add_child(environment_root)
+
+    var material := _make_pbr_material(Color(0.035, 0.11, 0.045), 0.98, 0.0, 3.0, 700 + selected_map.length())
+
+    if selected_map == "DESERT":
+        material = _make_pbr_material(Color(0.45, 0.25, 0.08), 0.92, 0.0, 3.0, 711)
+        for i in range(16):
+            var z := 12.0 - float(i) * 5.5
+            _add_map_tree_or_cactus(environment_root, Vector3(-12.0, 0.0, z), false)
+            _add_map_tree_or_cactus(environment_root, Vector3(14.0, 0.0, z - 2.0), false)
+    elif selected_map == "HIGHWAY":
+        material = _make_pbr_material(Color(0.07, 0.08, 0.09), 0.9, 0.05, 3.0, 722)
+        for i in range(12):
+            var z := 12.0 - float(i) * 7.0
+            _add_map_building(environment_root, Vector3(-14.0, 4.0, z), Vector3(6.0, 8.0, 6.0))
+            _add_map_building(environment_root, Vector3(16.0, 5.0, z - 3.0), Vector3(7.0, 10.0, 7.0))
+    else:
+        for i in range(18):
+            var z := 13.0 - float(i) * 5.0
+            _add_map_tree_or_cactus(environment_root, Vector3(-12.0, 0.0, z), true)
+            _add_map_tree_or_cactus(environment_root, Vector3(15.0, 0.0, z - 2.0), true)
+
+func _add_map_tree_or_cactus(parent: Node3D, position: Vector3, tree: bool) -> void:
+    var root := Node3D.new()
+    root.position = position
+    parent.add_child(root)
+
+    var material := _make_material(Color(0.08, 0.25, 0.09) if tree else Color(0.35, 0.5, 0.16), 0.0, 0.9)
+    var trunk := MeshInstance3D.new()
+    var trunk_mesh := CylinderMesh.new()
+    trunk_mesh.top_radius = 0.12 if tree else 0.22
+    trunk_mesh.bottom_radius = 0.22 if tree else 0.28
+    trunk_mesh.height = 2.6 if tree else 2.2
+    trunk.mesh = trunk_mesh
+    trunk.position.y = trunk_mesh.height * 0.5
+    trunk.material_override = material
+    root.add_child(trunk)
+
+    if tree:
+        var crown := MeshInstance3D.new()
+        var crown_mesh := SphereMesh.new()
+        crown_mesh.radius = 1.1
+        crown_mesh.height = 2.2
+        crown.mesh = crown_mesh
+        crown.position.y = 2.9
+        crown.material_override = material
+        root.add_child(crown)
+    else:
+        for side in [-1.0, 1.0]:
+            var arm := MeshInstance3D.new()
+            var arm_mesh := CylinderMesh.new()
+            arm_mesh.top_radius = 0.1
+            arm_mesh.bottom_radius = 0.14
+            arm_mesh.height = 0.9
+            arm.mesh = arm_mesh
+            arm.position = Vector3(side * 0.42, 1.7, 0.0)
+            arm.rotation_degrees.z = side * 65.0
+            arm.material_override = material
+            root.add_child(arm)
+
+func _add_map_building(parent: Node3D, position: Vector3, size: Vector3) -> void:
+    var building := MeshInstance3D.new()
+    var mesh := BoxMesh.new()
+    mesh.size = size
+    building.mesh = mesh
+    building.position = position
+    building.material_override = _make_material(Color(0.16, 0.18, 0.2), 0.25, 0.75)
+    parent.add_child(building)
+
+func _sync_race_start_to_map() -> void:
+    if track_path.is_empty():
+        return
+    race_start_z = track_path[0].z
+    finish_z = track_path[track_path.size() - 1].z
+    var car := get_node_or_null("PlayerCar")
+    if car:
+        car.global_position = track_path[0] + Vector3(0.0, 1.0, 0.0)
 
 func _build_rewards_hud() -> void:
     reward_label = Label.new()
