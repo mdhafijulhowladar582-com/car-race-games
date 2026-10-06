@@ -101,8 +101,8 @@ func save_best_score(race_time: float, map_name: String, car_name: String) -> vo
     if not is_authenticated() or user_id.is_empty():
         score_failed.emit("Guest mode: online score upload is disabled.")
         return
-    if race_time <= 0.0:
-        score_failed.emit("Invalid race time.")
+    if race_time < 3.0 or race_time > 3600.0:
+        score_failed.emit("Race time is outside the allowed range.")
         return
 
     last_submitted_time = race_time
