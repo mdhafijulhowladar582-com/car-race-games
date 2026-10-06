@@ -431,7 +431,7 @@ func _create_looped_noise(duration: float) -> AudioStreamWAV:
     var stream := _create_noise(duration)
     stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
     stream.loop_begin = 0
-    stream.loop_end = stream.data.size() / 2
+    stream.loop_end = int(stream.data.size() / 2)
     return stream
 
 func _create_noise(duration: float) -> AudioStreamWAV:
@@ -557,9 +557,6 @@ func _build_car() -> void:
     var box := BoxShape3D.new()
     box.size = Vector3(2.2, 0.9, 4.0)
     collision.shape = box
-
-    var body := get_node("Body") as MeshInstance3D
-    body.mesh = null
 
     var car_root := Node3D.new()
     car_root.name = "CarVisual"
