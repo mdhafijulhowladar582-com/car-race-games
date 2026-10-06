@@ -29,6 +29,9 @@ var garage_overlay: ColorRect
 var garage_info_label: Label
 var ai_opponents: Array[Node3D] = []
 var ai_count := 3
+var ai_skill_profiles := [0.94, 1.0, 1.06]
+var ai_racing_offsets := [-1.8, 0.0, 1.8]
+var ai_lap_progress: Array[int] = []
 var ambience_player: AudioStreamPlayer3D
 var race_finished := false
 var race_started := false
@@ -1474,6 +1477,19 @@ func _countdown_step() -> void:
         var tween := create_tween()
         tween.tween_property(countdown_label, "modulate:a", 0.0, 0.6)
         tween.finished.connect(countdown_label.queue_free)
+
+func _update_ai_racing_behavior() -> void:
+    for i in range(ai_opponents.size()):
+        var ai := ai_opponents[i]
+        if not is_instance_valid(ai):
+            continue
+        var ai_script := ai as CharacterBody3D
+        if not ai_script:
+            continue
+        if ai_script.has_method("set_racing_skill"):
+            ai_script.set_racing_skill(ai_skill_profiles[min(i, ai_skill_profiles.size() - 1)])
+        if ai_script.has_method("set_racing_offset"):
+            ai_script.set_racing_offset(ai_racing_offsets[min(i, ai_racing_offsets.size() - 1)])
 
 func _build_ai_opponents() -> void:
     var route: Array[Vector3] = track_path.duplicate()
