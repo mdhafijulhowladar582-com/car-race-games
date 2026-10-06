@@ -19,6 +19,8 @@ var mode_overlay: ColorRect
 var mode_label: Label
 var selected_mode := "quick_race"
 var mode_name := "QUICK RACE"
+var selected_car := "SPORTS"
+var car_label: Label
 var ai_opponents: Array[Node3D] = []
 var ai_count := 3
 var ambience_player: AudioStreamPlayer3D
@@ -695,6 +697,40 @@ func _add_barrel(position: Vector3) -> void:
     collision.shape = shape
     obstacle.add_child(collision)
 
+func _build_car_select(parent: Control) -> void:
+    car_label = Label.new()
+    car_label.text = "CAR: SPORTS\nSpeed 34 | Acceleration 18 | Handling 2.2"
+    car_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    car_label.set_anchors_preset(Control.PRESET_CENTER)
+    car_label.position = Vector2(-360.0, -130.0)
+    car_label.size = Vector2(720.0, 80.0)
+    car_label.add_theme_font_size_override("font_size", 22)
+    parent.add_child(car_label)
+
+    _add_car_button(parent, "SPORTS", Vector2(-310.0, -45.0))
+    _add_car_button(parent, "MUSCLE", Vector2(-105.0, -45.0))
+    _add_car_button(parent, "GT", Vector2(100.0, -45.0))
+
+func _add_car_button(parent: Control, car_name: String, button_position: Vector2) -> void:
+    var button := Button.new()
+    button.text = car_name
+    button.set_anchors_preset(Control.PRESET_CENTER)
+    button.position = button_position
+    button.size = Vector2(190.0, 64.0)
+    button.focus_mode = Control.FOCUS_NONE
+    button.add_theme_font_size_override("font_size", 20)
+    button.pressed.connect(_select_car.bind(car_name))
+    parent.add_child(button)
+
+func _select_car(car_name: String) -> void:
+    selected_car = car_name
+    if car_name == "MUSCLE":
+        car_label.text = "CAR: MUSCLE\nSpeed 30 | Acceleration 20 | Handling 1.8"
+    elif car_name == "GT":
+        car_label.text = "CAR: GT\nSpeed 38 | Acceleration 16 | Handling 2.4"
+    else:
+        car_label.text = "CAR: SPORTS\nSpeed 34 | Acceleration 18 | Handling 2.2"
+
 func _build_mode_select() -> void:
     var canvas := CanvasLayer.new()
     canvas.name = "ModeSelectUI"
@@ -725,14 +761,16 @@ func _build_mode_select() -> void:
     mode_label.add_theme_font_size_override("font_size", 24)
     mode_overlay.add_child(mode_label)
 
-    _add_mode_button(mode_overlay, "QUICK RACE", Vector2(-310.0, -45.0), "quick_race")
-    _add_mode_button(mode_overlay, "TIME TRIAL", Vector2(-105.0, -45.0), "time_trial")
-    _add_mode_button(mode_overlay, "CAREER", Vector2(100.0, -45.0), "career")
+    _build_car_select(mode_overlay)
+
+    _add_mode_button(mode_overlay, "QUICK RACE", Vector2(-310.0, 45.0), "quick_race")
+    _add_mode_button(mode_overlay, "TIME TRIAL", Vector2(-105.0, 45.0), "time_trial")
+    _add_mode_button(mode_overlay, "CAREER", Vector2(100.0, 45.0), "career")
 
     var start := Button.new()
     start.text = "START RACE"
     start.set_anchors_preset(Control.PRESET_CENTER)
-    start.position = Vector2(-170.0, 75.0)
+    start.position = Vector2(-170.0, 135.0)
     start.size = Vector2(340.0, 78.0)
     start.focus_mode = Control.FOCUS_NONE
     start.add_theme_font_size_override("font_size", 28)
@@ -775,7 +813,10 @@ func _start_selected_mode() -> void:
         total_laps = 3
     else:
         total_laps = 1
-    race_label.text = mode_name + " 0%"
+    race_label.text = mode_name + " | " + selected_car + " 0%"
+    var car := get_node_or_null("PlayerCar")
+    if car and car.has_method("configure_car"):
+        car.configure_car(selected_car)
     _start_race_countdown()
 
 func _start_race_countdown() -> void:
