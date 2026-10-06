@@ -616,9 +616,53 @@ func _build_weather_select() -> void:
 
 func _build_map_select() -> void:
     map_label = Label.new()
-    map_label.text = "MAP: CITY"
+    map_label.text = "MAP: %s" % selected_map
     map_label.position = Vector2(700.0, 15.0)
+    map_label.add_theme_font_size_override("font_size", 20)
     add_child(map_label)
+
+    var button := Button.new()
+    button.text = "MAP"
+    button.position = Vector2(840.0, 12.0)
+    button.size = Vector2(90.0, 42.0)
+    button.pressed.connect(_show_map_selector)
+    add_child(button)
+
+func _show_map_selector() -> void:
+    var overlay := ColorRect.new()
+    overlay.name = "MapSelectorOverlay"
+    overlay.color = Color(0.02, 0.025, 0.04, 0.94)
+    overlay.position = Vector2(430.0, 150.0)
+    overlay.size = Vector2(420.0, 390.0)
+    add_child(overlay)
+
+    var title := Label.new()
+    title.text = "SELECT MAP"
+    title.position = Vector2(145.0, 25.0)
+    title.add_theme_font_size_override("font_size", 28)
+    overlay.add_child(title)
+
+    var maps := ["CITY", "HIGHWAY", "DESERT"]
+    for i in range(maps.size()):
+        var map_name := maps[i]
+        var button := Button.new()
+        button.text = map_name
+        button.position = Vector2(70.0, 85.0 + i * 75.0)
+        button.size = Vector2(280.0, 55.0)
+        button.pressed.connect(func() -> void:
+            _apply_map(map_name)
+            overlay.queue_free()
+        )
+        overlay.add_child(button)
+
+    var close := Button.new()
+    close.text = "CLOSE"
+    close.position = Vector2(150.0, 315.0)
+    close.size = Vector2(120.0, 45.0)
+    close.pressed.connect(func() -> void:
+        overlay.queue_free()
+    )
+    overlay.add_child(close)
 
 func _build_settings_button() -> void:
     var button := Button.new()
