@@ -72,6 +72,9 @@ var settings_path := "user://car_race_settings.json"
 var leaderboard_overlay: ColorRect
 var leaderboard_label: Label
 var leaderboard_entries: Array = []
+var online_leaderboard_url := ""
+var leaderboard_http: HTTPRequest
+var online_leaderboard_status := "OFFLINE"
 var career_level := 1
 var career_wins := 0
 var career_races := 0
@@ -113,6 +116,7 @@ func _ready() -> void:
     _build_map_select()
     _build_settings_button()
     _build_leaderboard_button()
+    _setup_online_leaderboard()
     _update_map_label()
     _update_rewards_hud()
     _update_ai_racing(0.0)
@@ -1079,6 +1083,54 @@ func _build_leaderboard_button() -> void:
     button.pressed.connect(_open_leaderboard)
     mode_overlay.add_child(button)
 
+func _setup_online_leaderboard() -> void:
+    leaderboard_http = HTTPRequest.new()
+    leaderboard_http.name = "LeaderboardHTTP"
+    leaderboard_http.timeout = 8.0
+    add_child(leaderboard_http)
+    leaderboard_http.request_completed.connect(_on_leaderboard_request_completed)
+
+func _update_leaderboard() -> void:
+    var entry := {"time": race_elapsed, "mode": selected_mode, "map": selected_map, "weather": selected_weather}
+    leaderboard_entries.append(entry)
+    leaderboard_entries.sort_custom(func(a, b): return float(a.get("time", 999999.0)) < float(b.get("time", 999999.0)))
+    if leaderboard_entries.size() > 10:
+        leaderboard_entries.resize(10)
+    _submit_online_leaderboard_entry(entry)
+
+func _submit_online_leaderboard_entry(entry: Dictionary) -> void:
+    if online_leaderboard_url.is_empty() or not is_instance_valid(leaderboard_http):
+        online_leaderboard_status = "OFFLINE"
+        return
+    var payload := {
+        "time": float(entry.get("time", 0.0)),
+        "mode": str(entry.get("mode", "quick_race")),
+        "map": str(entry.get("map", "CITY")),
+        "weather": str(entry.get("weather", "DAY"))
+    }
+    var headers := PackedStringArray(["Content-Type: application/json"])
+    var error := leaderboard_http.request(online_leaderboard_url, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+    online_leaderboard_status = "UPLOADING" if error == OK else "ERROR"
+
+func _fetch_online_leaderboard() -> void:
+    if online_leaderboard_url.is_empty() or not is_instance_valid(leaderboard_http):
+        online_leaderboard_status = "OFFLINE"
+        return
+    var error := leaderboard_http.request(online_leaderboard_url, PackedStringArray(["Accept: application/json"]), HTTPClient.METHOD_GET)
+    online_leaderboard_status = "LOADING" if error == OK else "ERROR"
+
+func _on_leaderboard_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+    if result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300:
+        online_leaderboard_status = "ERROR"
+        return
+    var parsed = JSON.parse_string(body.get_string_from_utf8())
+    if parsed is Array:
+        leaderboard_entries = parsed
+        leaderboard_entries.sort_custom(func(a, b): return float(a.get("time", 999999.0)) < float(b.get("time", 999999.0)))
+        if leaderboard_entries.size() > 10:
+            leaderboard_entries.resize(10)
+    online_leaderboard_status = "ONLINE"
+
 func _update_leaderboard() -> void:
     var entry := {"time": race_elapsed, "mode": selected_mode, "map": selected_map, "weather": selected_weather}
     leaderboard_entries.append(entry)
@@ -1104,7 +1156,8 @@ func _open_leaderboard() -> void:
     leaderboard_label.size = Vector2(720.0, 390.0)
     leaderboard_label.add_theme_font_size_override("font_size", 20)
     leaderboard_overlay.add_child(leaderboard_label)
-    var summary := "BEST TIME: " + ("--" if best_time <= 0.0 else _format_time(best_time)) + "\nTOTAL RACES: %d\nCOINS: %d   XP: %d\n\n" % [total_races, coins, xp]
+    _fetch_online_leaderboard()
+    var summary := "BEST TIME: " + ("--" if best_time <= 0.0 else _format_time(best_time)) + "\nTOTAL RACES: %d\nCOINS: %d   XP: %d\nONLINE: %s\n\n" % [total_races, coins, xp, online_leaderboard_status]
     var rows := ""
     for i in range(leaderboard_entries.size()):
         var e = leaderboard_entries[i]
