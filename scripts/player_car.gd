@@ -48,6 +48,8 @@ var camera_base_rotation := Vector3(-15.0, 180.0, 0.0)
 var camera_shake := 0.0
 var camera_shake_strength := 0.0
 var camera_cinematic := false
+var camera_velocity_offset := Vector3.ZERO
+var previous_camera_speed := 0.0
 var boost_particles: GPUParticles3D
 var impact_particles: GPUParticles3D
 var car_model := "SPORTS"
@@ -211,8 +213,11 @@ func _update_camera(delta: float) -> void:
 
     var speed_ratio := clamp(abs(speed) / max_speed, 0.0, 1.0)
     var steer_ratio := clamp(steering / max(steering_sensitivity, 0.01), -1.0, 1.0)
-    var target_fov := lerp(68.0, 82.0, speed_ratio)
-    camera.fov = lerp(camera.fov, target_fov, minf(delta * 5.0, 1.0))
+    var acceleration_ratio := clamp((speed - previous_camera_speed) / max(max_speed * delta, 0.01), -1.0, 1.0)
+    previous_camera_speed = speed
+    var target_fov := lerp(68.0, 84.0, speed_ratio)
+    target_fov += maxf(acceleration_ratio, 0.0) * 2.0
+    camera.fov = lerp(camera.fov, target_fov, minf(delta * 5.5, 1.0))
 
     if camera_cinematic:
         camera.position = camera.position.lerp(Vector3(0.0, 5.8, 11.5), minf(delta * 2.5, 1.0))
@@ -228,14 +233,17 @@ func _update_camera(delta: float) -> void:
     var target_position := camera_base_position
     target_position.x += steer_ratio * 0.32
     target_position.y += speed_ratio * 0.22
-    target_position.z -= speed_ratio * 0.65
+    target_position.z -= speed_ratio * 0.85
+    target_position.x += acceleration_ratio * 0.12
+    target_position.y += maxf(acceleration_ratio, 0.0) * 0.08
     target_position.x += shake_x
     target_position.y += shake_y
 
     var target_rotation := camera_base_rotation
     target_rotation.x -= speed_ratio * 2.0
-    target_rotation.y += steer_ratio * 1.8
-    target_rotation.z = -steer_ratio * 3.2 + shake_y * 1.8
+    target_rotation.y += steer_ratio * lerp(1.8, 2.8, speed_ratio)
+    target_rotation.z = -steer_ratio * lerp(3.2, 4.4, speed_ratio) + shake_y * 1.8
+    target_rotation.x -= maxf(acceleration_ratio, 0.0) * 1.2
 
     camera.position = camera.position.lerp(target_position, minf(delta * 7.0, 1.0))
     camera.rotation_degrees = camera.rotation_degrees.lerp(target_rotation, minf(delta * 7.0, 1.0))
