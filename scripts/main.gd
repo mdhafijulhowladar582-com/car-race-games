@@ -898,6 +898,7 @@ func _add_curve_apex_marker(position: Vector3) -> void:
     mesh.top_radius = 0.16
     mesh.bottom_radius = 0.16
     mesh.height = 0.8
+    marker.name = "ApexMarker"
     marker.mesh = mesh
     marker.position = position + Vector3(0.0, 0.45, 0.0)
     marker.material_override = _make_emission_material(Color(1.0, 0.28, 0.05), 0.7)
@@ -1034,7 +1035,20 @@ func _add_map_button(parent: Control, text_value: String, button_position: Vecto
 
 func _select_map(map_value: String) -> void:
     selected_map = map_value
+    _rebuild_selected_map()
     _apply_map(selected_map)
+
+func _rebuild_selected_map() -> void:
+    for child in get_children():
+        if child.name.begins_with("CurvedRoad") or child.name == "ApexMarker":
+            child.queue_free()
+    track_path = _get_map_track_path()
+    for i in range(track_path.size() - 1):
+        _add_curved_road_segment(track_path[i], track_path[i + 1], i)
+    if track_path.size() > 17:
+        _add_curve_apex_marker(track_path[5])
+        _add_curve_apex_marker(track_path[11])
+        _add_curve_apex_marker(track_path[17])
 
 func _apply_map(map_value: String) -> void:
     selected_map = map_value
