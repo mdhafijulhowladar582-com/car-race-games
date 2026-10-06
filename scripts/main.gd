@@ -94,6 +94,43 @@ var sun_light: DirectionalLight3D
 var sky_fill_light: DirectionalLight3D
 var lighting_tuning := 1.0
 
+func _load_progress() -> void:
+    var file := FileAccess.open(save_path, FileAccess.READ)
+    if file == null:
+        return
+    var json := JSON.new()
+    var error := json.parse(file.get_as_text())
+    if error != OK:
+        return
+    var data: Dictionary = json.data
+    if data.has("coins"):
+        coins = int(data["coins"])
+    if data.has("xp"):
+        xp = int(data["xp"])
+    if data.has("total_races"):
+        total_races = int(data["total_races"])
+    if data.has("best_time"):
+        best_time = float(data["best_time"])
+    if data.has("achievements"):
+        achievements = Array(data["achievements"])
+
+func _load_settings() -> void:
+    var file := FileAccess.open(settings_path, FileAccess.READ)
+    if file == null:
+        return
+    var json := JSON.new()
+    var error := json.parse(file.get_as_text())
+    if error != OK:
+        return
+    var data: Dictionary = json.data
+    if data.has("graphics_quality"):
+        graphics_quality = str(data["graphics_quality"])
+    if data.has("master_volume"):
+        master_volume = float(data["master_volume"])
+    if data.has("steering_sensitivity"):
+        steering_sensitivity = float(data["steering_sensitivity"])
+    if data.has("vibration_enabled"):
+        vibration_enabled = bool(data["vibration_enabled"])
 
 func _ready() -> void:
     _load_progress()
@@ -131,6 +168,173 @@ func _ready() -> void:
         car.health_changed.connect(_on_health_changed)
         car.game_over.connect(_on_game_over)
         _on_health_changed(car.health, car.max_health)
+
+func _build_mobile_controls() -> void:
+    mobile_controls = CanvasLayer.new()
+    add_child(mobile_controls)
+    var root := Control.new()
+    root.set_anchors_preset(Control.PRESET_FULL_RECT)
+    mobile_controls.add_child(root)
+    var hint := Label.new()
+    hint.text = "Steer: A/D or Left/Right\nAccelerate: W / Up\nBrake: S / Down"
+    hint.position = Vector2(18.0, 18.0)
+    hint.add_theme_font_size_override("font_size", 18)
+    root.add_child(hint)
+
+func _build_health_hud() -> void:
+    var canvas := CanvasLayer.new()
+    add_child(canvas)
+    var root := Control.new()
+    root.set_anchors_preset(Control.PRESET_FULL_RECT)
+    canvas.add_child(root)
+    health_bar = ProgressBar.new()
+    health_bar.min_value = 0.0
+    health_bar.max_value = 100.0
+    health_bar.value = 100.0
+    health_bar.position = Vector2(20.0, 20.0)
+    health_bar.size = Vector2(220.0, 20.0)
+    root.add_child(health_bar)
+    health_label = Label.new()
+    health_label.position = Vector2(20.0, 45.0)
+    health_label.text = "Health 100%"
+    root.add_child(health_label)
+
+func _build_race_system() -> void:
+    race_label = Label.new()
+    race_label.text = "READY"
+    race_label.position = Vector2(320.0, 20.0)
+    race_label.add_theme_font_size_override("font_size", 30)
+    add_child(race_label)
+
+func _build_ai_opponents() -> void:
+    if track_path.is_empty():
+        return
+    var ai_scene := preload("res://scripts/ai_car.gd")
+    for i in range(ai_count):
+        var ai := CharacterBody3D.new()
+        ai.set_script(ai_scene)
+        ai.position = Vector3(ai_racing_offsets[i], 1.0, 15.0)
+        ai.name = "AiOpponent%s" % (i + 1)
+        add_child(ai)
+        ai_opponents.append(ai)
+        ai.setup(track_path, i)
+        ai.start_race()
+
+func _build_game_over_ui() -> void:
+    game_over_overlay = ColorRect.new()
+    game_over_overlay.color = Color(0.0, 0.0, 0.0, 0.7)
+    game_over_overlay.size = Vector2(1280.0, 720.0)
+    game_over_overlay.visible = false
+    add_child(game_over_overlay)
+    game_over_title = Label.new()
+    game_over_title.text = "RACE OVER"
+    game_over_title.position = Vector2(520.0, 200.0)
+    game_over_title.add_theme_font_size_override("font_size", 42)
+    game_over_overlay.add_child(game_over_title)
+    restart_button = Button.new()
+    restart_button.text = "Restart"
+    restart_button.position = Vector2(540.0, 350.0)
+    restart_button.pressed.connect(func() -> void:
+        get_tree().reload_current_scene()
+    )
+    game_over_overlay.add_child(restart_button)
+
+func _build_mode_select() -> void:
+    mode_overlay = ColorRect.new()
+    mode_overlay.color = Color(0.0, 0.0, 0.0, 0.15)
+    mode_overlay.size = Vector2(300.0, 120.0)
+    mode_overlay.position = Vector2(480.0, 20.0)
+    add_child(mode_overlay)
+    mode_label = Label.new()
+    mode_label.text = "QUICK RACE"
+    mode_label.position = Vector2(20.0, 40.0)
+    mode_label.add_theme_font_size_override("font_size", 26)
+    mode_overlay.add_child(mode_label)
+
+func _apply_weather(weather: String) -> void:
+    selected_weather = weather
+
+func _apply_map(map_name: String) -> void:
+    selected_map = map_name
+    if map_label:
+        map_label.text = "MAP: %s" % selected_map
+
+func _build_rewards_hud() -> void:
+    reward_label = Label.new()
+    reward_label.text = "Rewards"
+    reward_label.position = Vector2(950.0, 20.0)
+    add_child(reward_label)
+    coins_label = Label.new()
+    coins_label.text = "Coins: 0"
+    coins_label.position = Vector2(950.0, 48.0)
+    add_child(coins_label)
+
+func _build_professional_mobile_hud() -> void:
+    speed_label = Label.new()
+    speed_label.text = "0 KM/H"
+    speed_label.position = Vector2(1000.0, 600.0)
+    add_child(speed_label)
+    speed_bar = ProgressBar.new()
+    speed_bar.min_value = 0.0
+    speed_bar.max_value = 140.0
+    speed_bar.value = 0.0
+    speed_bar.position = Vector2(960.0, 640.0)
+    speed_bar.size = Vector2(200.0, 15.0)
+    add_child(speed_bar)
+
+func _build_weather_select() -> void:
+    weather_overlay = ColorRect.new()
+    weather_overlay.color = Color(0.0, 0.0, 0.0, 0.0)
+    weather_overlay.size = Vector2(1.0, 1.0)
+    add_child(weather_overlay)
+
+func _build_map_select() -> void:
+    map_label = Label.new()
+    map_label.text = "MAP: CITY"
+    map_label.position = Vector2(700.0, 15.0)
+    add_child(map_label)
+
+func _build_settings_button() -> void:
+    var button := Button.new()
+    button.text = "Settings"
+    button.position = Vector2(1160.0, 20.0)
+    add_child(button)
+
+func _build_leaderboard_button() -> void:
+    var button := Button.new()
+    button.text = "Leaderboard"
+    button.position = Vector2(1110.0, 70.0)
+    add_child(button)
+
+func _setup_online_leaderboard() -> void:
+    online_leaderboard_status = "OFFLINE"
+
+func _update_map_label() -> void:
+    if map_label:
+        map_label.text = "MAP: %s" % selected_map
+
+func _update_rewards_hud() -> void:
+    if coins_label:
+        coins_label.text = "Coins: %d" % coins
+    if reward_label:
+        reward_label.text = "Rewards | XP: %d | Coins: %d" % [xp, coins]
+
+func _update_ai_racing(_delta: float) -> void:
+    for i in range(ai_opponents.size()):
+        var ai := ai_opponents[i] as Node3D
+        if ai:
+            ai.position.z = clamp(ai.position.z - 0.1, -120.0, 50.0)
+
+func _on_health_changed(current_health: float, maximum_health: float) -> void:
+    if health_bar:
+        health_bar.max_value = maximum_health
+        health_bar.value = current_health
+    if health_label:
+        health_label.text = "Health %.0f%%" % (current_health / max(maximum_health, 0.0001) * 100.0)
+
+func _on_game_over() -> void:
+    if game_over_overlay:
+        game_over_overlay.visible = true
 
 func _build_ambience_audio() -> void:
     ambience_player = AudioStreamPlayer3D.new()
@@ -683,6 +887,7 @@ func _make_pbr_material(base_color: Color, roughness_value: float, metallic_valu
             image.set_pixel(x, y, Color(base_color.r * variation, base_color.g * variation, base_color.b * variation, 1.0))
     material.albedo_texture = ImageTexture.create_from_image(image)
     return material
+
 func _make_material(color: Color, metallic: float, roughness: float) -> StandardMaterial3D:
     var material := _make_pbr_material(color, roughness, metallic, 2.5, 401)
     return material
@@ -888,7 +1093,6 @@ func _get_map_track_path() -> Array[Vector3]:
         Vector3(7.2, 0.92, -67.0), Vector3(8.5, 0.98, -71.0)
     ]
 
-
 func _add_curved_road_segment(a: Vector3, b: Vector3, index: int) -> void:
     var midpoint := (a + b) * 0.5
     var direction := b - a
@@ -999,1600 +1203,19 @@ func _build_car_select(parent: Control) -> void:
 func _add_car_button(parent: Control, car_name: String, button_position: Vector2) -> void:
     var button := Button.new()
     button.text = car_name
-    button.set_anchors_preset(Control.PRESET_CENTER)
     button.position = button_position
-    button.size = Vector2(190.0, 64.0)
-    button.focus_mode = Control.FOCUS_NONE
-    button.add_theme_font_size_override("font_size", 20)
-    button.pressed.connect(_select_car.bind(car_name))
+    button.size = Vector2(160.0, 55.0)
     parent.add_child(button)
 
-func _add_custom_button(parent: Control, button_text: String, button_position: Vector2, action_name: String) -> void:
+func _add_custom_button(parent: Control, label_name: String, button_position: Vector2, action_name: String) -> void:
     var button := Button.new()
-    button.text = button_text
-    button.set_anchors_preset(Control.PRESET_CENTER)
+    button.text = label_name
     button.position = button_position
-    button.size = Vector2(190.0, 54.0)
-    button.focus_mode = Control.FOCUS_NONE
-    button.add_theme_font_size_override("font_size", 17)
-    button.pressed.connect(_apply_customization.bind(action_name))
+    button.size = Vector2(150.0, 42.0)
     parent.add_child(button)
-
-func _apply_customization(action_name: String) -> void:
-    if action_name == "color_red":
-        selected_color = Color(0.82, 0.025, 0.02)
-    elif action_name == "color_blue":
-        selected_color = Color(0.04, 0.08, 0.72)
-    elif action_name == "color_green":
-        selected_color = Color(0.04, 0.55, 0.18)
-    elif action_name == "wheel_black":
-        selected_wheels = "BLACK"
-    elif action_name == "wheel_gold":
-        selected_wheels = "GOLD"
-    elif action_name == "wheel_sport":
-        selected_wheels = "SPORT"
-    elif action_name == "upgrade":
-        upgrade_level = mini(upgrade_level + 1, 3)
-    _refresh_customization_label()
-    _update_car_selection_visuals()
-    _save_progress()
-    if is_instance_valid(garage_info_label):
-        garage_info_label.text = "CAR: %s\\nCOLOR: %s\\nWHEELS: %s\\nUPGRADE: %d/3\\n\\nSPEED: %d   ACCEL: %d   HANDLING: %.1f" % [_garage_car_name(), _garage_color_name(), selected_wheels, upgrade_level, _garage_speed(), _garage_accel(), _garage_handling()]
-
-func _refresh_customization_label() -> void:
-    var color_name := "RED"
-    if selected_color == Color(0.04, 0.08, 0.72):
-        color_name = "BLUE"
-    elif selected_color == Color(0.04, 0.55, 0.18):
-        color_name = "GREEN"
-    customization_label.text = "COLOR: %s   WHEELS: %s   UPGRADE: %d/3" % [color_name, selected_wheels, upgrade_level]
-
-func _select_car(car_name: String) -> void:
-    selected_car = car_name
-    _update_car_selection_visuals()
-    _save_progress()
-
-func _update_car_selection_visuals() -> void:
-    if not is_instance_valid(car_label):
-        return
-    car_label.text = "CAR: %s\nSpeed %d | Acceleration %d | Handling %.2f | Upgrade %d/3" % [selected_car, _garage_speed(), _garage_accel(), _garage_handling(), upgrade_level]
-    if is_instance_valid(customization_label):
-        customization_label.text = "COLOR: %s   WHEELS: %s   UPGRADE: %d/3" % [_color_name(), selected_wheels, upgrade_level]
-
-func _color_name() -> String:
-    if selected_color.r > selected_color.b * 1.6:
-        return "RED"
-    if selected_color.b > selected_color.r * 1.3:
-        return "BLUE"
-    return "GREEN"
-
-func _build_map_select() -> void:
-    var panel := Panel.new()
-    panel.position = Vector2(780.0, 300.0)
-    panel.size = Vector2(320.0, 220.0)
-    panel.z_index = 5
-    mode_overlay.add_child(panel)
-
-    var title := Label.new()
-    title.text = "MAP"
-    title.position = Vector2(20.0, 12.0)
-    title.size = Vector2(280.0, 35.0)
-    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    title.add_theme_font_size_override("font_size", 22)
-    panel.add_child(title)
-
-    _add_map_button(panel, "CITY", Vector2(20.0, 55.0), "CITY")
-    _add_map_button(panel, "HIGHWAY", Vector2(20.0, 110.0), "HIGHWAY")
-    _add_map_button(panel, "DESERT", Vector2(20.0, 165.0), "DESERT")
-
-func _add_map_button(parent: Control, text_value: String, button_position: Vector2, map_value: String) -> void:
-    var button := Button.new()
-    button.text = text_value
-    button.position = button_position
-    button.size = Vector2(280.0, 45.0)
-    button.focus_mode = Control.FOCUS_NONE
-    button.pressed.connect(_select_map.bind(map_value))
-    parent.add_child(button)
-
-func _select_map(map_value: String) -> void:
-    selected_map = map_value
-    _rebuild_selected_map()
-    _apply_map(selected_map)
-
-func _rebuild_selected_map() -> void:
-    for child in get_children():
-        if child.name.begins_with("CurvedRoad") or child.name == "ApexMarker":
-            child.queue_free()
-    track_path = _get_map_track_path()
-    for i in range(track_path.size() - 1):
-        _add_curved_road_segment(track_path[i], track_path[i + 1], i)
-    if track_path.size() > 17:
-        _add_curve_apex_marker(track_path[5])
-        _add_curve_apex_marker(track_path[11])
-        _add_curve_apex_marker(track_path[17])
-
-func _apply_map(map_value: String) -> void:
-    selected_map = map_value
-    var world := get_node_or_null("WorldEnvironment") as WorldEnvironment
-    if world:
-        var environment := world.environment
-        if map_value == "HIGHWAY":
-            environment.background_color = Color(0.18, 0.2, 0.24)
-        elif map_value == "DESERT":
-            environment.background_color = Color(0.32, 0.22, 0.12)
-        else:
-            environment.background_color = Color(0.08, 0.1, 0.14)
-    _update_map_label()
-    _save_progress()
-
-func _update_map_label() -> void:
-    if is_instance_valid(map_label):
-        map_label.text = "MAP: " + selected_map
-
-
-
-func _build_leaderboard_button() -> void:
-    var button := Button.new()
-    button.text = "LEADERBOARD"
-    button.position = Vector2(1110.0, 540.0)
-    button.size = Vector2(150.0, 58.0)
-    button.focus_mode = Control.FOCUS_NONE
-    button.pressed.connect(_open_leaderboard)
-    mode_overlay.add_child(button)
-
-func _setup_online_leaderboard() -> void:
-    leaderboard_http = HTTPRequest.new()
-    leaderboard_http.name = "LeaderboardHTTP"
-    leaderboard_http.timeout = 8.0
-    add_child(leaderboard_http)
-    leaderboard_http.request_completed.connect(_on_leaderboard_request_completed)
-
-func _update_leaderboard() -> void:
-    var entry := {"time": race_elapsed, "mode": selected_mode, "map": selected_map, "weather": selected_weather}
-    leaderboard_entries.append(entry)
-    leaderboard_entries.sort_custom(func(a, b): return float(a.get("time", 999999.0)) < float(b.get("time", 999999.0)))
-    if leaderboard_entries.size() > 10:
-        leaderboard_entries.resize(10)
-    _submit_online_leaderboard_entry(entry)
-
-func _submit_online_leaderboard_entry(entry: Dictionary) -> void:
-    if online_leaderboard_url.is_empty() or not is_instance_valid(leaderboard_http):
-        online_leaderboard_status = "OFFLINE"
-        return
-    var payload := {
-        "time": float(entry.get("time", 0.0)),
-        "mode": str(entry.get("mode", "quick_race")),
-        "map": str(entry.get("map", "CITY")),
-        "weather": str(entry.get("weather", "DAY"))
-    }
-    var headers := PackedStringArray(["Content-Type: application/json"])
-    var error := leaderboard_http.request(online_leaderboard_url, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
-    online_leaderboard_status = "UPLOADING" if error == OK else "ERROR"
-
-func _fetch_online_leaderboard() -> void:
-    if online_leaderboard_url.is_empty() or not is_instance_valid(leaderboard_http):
-        online_leaderboard_status = "OFFLINE"
-        return
-    var error := leaderboard_http.request(online_leaderboard_url, PackedStringArray(["Accept: application/json"]), HTTPClient.METHOD_GET)
-    online_leaderboard_status = "LOADING" if error == OK else "ERROR"
-
-func _on_leaderboard_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
-    if result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300:
-        online_leaderboard_status = "ERROR"
-        return
-    var parsed = JSON.parse_string(body.get_string_from_utf8())
-    if parsed is Array:
-        leaderboard_entries = parsed
-        leaderboard_entries.sort_custom(func(a, b): return float(a.get("time", 999999.0)) < float(b.get("time", 999999.0)))
-        if leaderboard_entries.size() > 10:
-            leaderboard_entries.resize(10)
-    online_leaderboard_status = "ONLINE"
-
-func _open_leaderboard() -> void:
-    leaderboard_overlay = ColorRect.new()
-    leaderboard_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    leaderboard_overlay.color = Color(0.01, 0.015, 0.025, 0.97)
-    leaderboard_overlay.z_index = 60
-    mode_overlay.add_child(leaderboard_overlay)
-    var title := Label.new()
-    title.text = "LEADERBOARD"
-    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    title.position = Vector2(390.0, 35.0)
-    title.size = Vector2(500.0, 60.0)
-    title.add_theme_font_size_override("font_size", 38)
-    leaderboard_overlay.add_child(title)
-    leaderboard_label = Label.new()
-    leaderboard_label.position = Vector2(280.0, 105.0)
-    leaderboard_label.size = Vector2(720.0, 390.0)
-    leaderboard_label.add_theme_font_size_override("font_size", 20)
-    leaderboard_overlay.add_child(leaderboard_label)
-    _fetch_online_leaderboard()
-    var summary := "BEST TIME: " + ("--" if best_time <= 0.0 else _format_time(best_time)) + "\nTOTAL RACES: %d\nCOINS: %d   XP: %d\nONLINE: %s\n\n" % [total_races, coins, xp, online_leaderboard_status]
-    var rows := ""
-    for i in range(leaderboard_entries.size()):
-        var e = leaderboard_entries[i]
-        rows += "%d. %s   %s   %s\n" % [i + 1, _format_time(float(e.get("time", 0.0))), str(e.get("mode", "quick_race")).to_upper(), str(e.get("map", "CITY")).to_upper()]
-    if rows == "":
-        rows = "No completed races yet.\nFinish a race to create your first local entry."
-    leaderboard_label.text = summary + rows
-    var back := Button.new()
-    back.text = "BACK"
-    back.position = Vector2(490.0, 540.0)
-    back.size = Vector2(300.0, 58.0)
-    back.focus_mode = Control.FOCUS_NONE
-    back.pressed.connect(_close_leaderboard)
-    leaderboard_overlay.add_child(back)
-
-func _close_leaderboard() -> void:
-    if is_instance_valid(leaderboard_overlay):
-        leaderboard_overlay.queue_free()
-        leaderboard_overlay = null
-
-func _format_time(value: float) -> String:
-    var total_seconds := max(0, int(value))
-    var minutes := total_seconds / 60
-    var seconds := total_seconds % 60
-    var hundredths := int((value - floor(value)) * 100.0)
-    return "%02d:%02d.%02d" % [minutes, seconds, hundredths]
-
-func _build_settings_button() -> void:
-    var button := Button.new()
-    button.text = "SETTINGS"
-    button.position = Vector2(920.0, 540.0)
-    button.size = Vector2(180.0, 58.0)
-    button.focus_mode = Control.FOCUS_NONE
-    button.pressed.connect(_open_settings)
-    mode_overlay.add_child(button)
-
-func _open_settings() -> void:
-    settings_overlay = ColorRect.new()
-    settings_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    settings_overlay.color = Color(0.01, 0.015, 0.025, 0.96)
-    settings_overlay.z_index = 50
-    mode_overlay.add_child(settings_overlay)
-    var title := Label.new()
-    title.text = "SETTINGS"
-    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    title.position = Vector2(390.0, 45.0)
-    title.size = Vector2(500.0, 60.0)
-    title.add_theme_font_size_override("font_size", 40)
-    settings_overlay.add_child(title)
-    settings_label = Label.new()
-    settings_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    settings_label.position = Vector2(330.0, 115.0)
-    settings_label.size = Vector2(620.0, 80.0)
-    settings_label.add_theme_font_size_override("font_size", 22)
-    settings_overlay.add_child(settings_label)
-    _add_settings_button("GRAPHICS: " + graphics_quality, Vector2(390.0, 220.0), "_cycle_graphics")
-    _add_settings_button("VOLUME: " + str(roundi(master_volume * 100.0)) + "%", Vector2(390.0, 280.0), "_cycle_volume")
-    _add_settings_button("STEERING: " + str(snapped(steering_sensitivity, 0.1)), Vector2(390.0, 340.0), "_cycle_sensitivity")
-    _add_settings_button("VIBRATION: " + ("ON" if vibration_enabled else "OFF"), Vector2(390.0, 400.0), "_toggle_vibration")
-    _add_settings_button("FPS: " + str(target_fps) + (" SAVER" if battery_saver else ""), Vector2(390.0, 460.0), "_cycle_performance")
-    _add_settings_button("BACK", Vector2(390.0, 530.0), "_close_settings")
-    _refresh_settings_label()
-
-func _add_settings_button(text_value: String, button_position: Vector2, method_name: String) -> void:
-    var button := Button.new()
-    button.text = text_value
-    button.position = button_position
-    button.size = Vector2(500.0, 50.0)
-    button.focus_mode = Control.FOCUS_NONE
-    button.pressed.connect(Callable(self, method_name))
-    settings_overlay.add_child(button)
-
-func _refresh_settings_label() -> void:
-    if is_instance_valid(settings_label):
-        settings_label.text = "Graphics " + graphics_quality + "   Volume " + str(roundi(master_volume * 100.0)) + "%\nSteering " + str(snapped(steering_sensitivity, 0.1)) + "   Vibration " + ("ON" if vibration_enabled else "OFF")
-
-func _cycle_graphics() -> void:
-    graphics_quality = "HIGH" if graphics_quality == "MEDIUM" else ("LOW" if graphics_quality == "HIGH" else "MEDIUM")
-    _apply_graphics_settings()
-    _save_settings()
-    _open_settings()
-
-func _cycle_volume() -> void:
-    master_volume -= 0.25
-    if master_volume < 0.0:
-        master_volume = 1.0
-    AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Master"), linear_to_db(master_volume) if master_volume > 0.0 else -80.0)
-    _save_settings()
-    _open_settings()
-
-func _cycle_sensitivity() -> void:
-    steering_sensitivity += 0.25
-    if steering_sensitivity > 1.5:
-        steering_sensitivity = 0.5
-    _save_settings()
-    _open_settings()
-
-func _toggle_vibration() -> void:
-    vibration_enabled = not vibration_enabled
-    _save_settings()
-    _open_settings()
-
-func _cycle_performance() -> void:
-    battery_saver = not battery_saver
-    target_fps = 45 if battery_saver else 60
-    Engine.max_fps = target_fps
-    _apply_graphics_settings()
-    _save_settings()
-    _open_settings()
-
-func _close_settings() -> void:
-    if is_instance_valid(settings_overlay):
-        settings_overlay.queue_free()
-        settings_overlay = null
-
-func _apply_graphics_settings() -> void:
-    get_tree().root.scaling_3d_scale = 0.65 if graphics_quality == "LOW" else (1.0 if graphics_quality == "HIGH" else 0.82)
-    if battery_saver:
-        get_tree().root.scaling_3d_scale = min(get_tree().root.scaling_3d_scale, 0.72)
-
-func _save_settings() -> void:
-    var data := {"graphics_quality": graphics_quality, "master_volume": master_volume, "steering_sensitivity": steering_sensitivity, "vibration_enabled": vibration_enabled, "target_fps": target_fps, "battery_saver": battery_saver}
-    var file := FileAccess.open(settings_path, FileAccess.WRITE)
-    if file:
-        file.store_string(JSON.stringify(data))
-
-func _load_settings() -> void:
-    if FileAccess.file_exists(settings_path):
-        var file := FileAccess.open(settings_path, FileAccess.READ)
-        if file:
-            var parsed = JSON.parse_string(file.get_as_text())
-            if typeof(parsed) == TYPE_DICTIONARY:
-                graphics_quality = str(parsed.get("graphics_quality", "MEDIUM"))
-                master_volume = float(parsed.get("master_volume", 1.0))
-                steering_sensitivity = float(parsed.get("steering_sensitivity", 1.0))
-                vibration_enabled = bool(parsed.get("vibration_enabled", true))
-                target_fps = 45 if int(parsed.get("target_fps", 60)) <= 45 else 60
-                battery_saver = bool(parsed.get("battery_saver", false))
-    _apply_graphics_settings()
-    Engine.max_fps = target_fps
-    AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Master"), linear_to_db(master_volume) if master_volume > 0.0 else -80.0)
-
-func _build_weather_select() -> void:
-    var panel := Panel.new()
-    panel.position = Vector2(30.0, 300.0)
-    panel.size = Vector2(320.0, 220.0)
-    panel.z_index = 5
-    mode_overlay.add_child(panel)
-
-    var title := Label.new()
-    title.text = "WEATHER"
-    title.position = Vector2(20.0, 12.0)
-    title.size = Vector2(280.0, 35.0)
-    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    title.add_theme_font_size_override("font_size", 22)
-    panel.add_child(title)
-
-    _add_weather_button(panel, "DAY", Vector2(20.0, 55.0), "DAY")
-    _add_weather_button(panel, "NIGHT", Vector2(20.0, 110.0), "NIGHT")
-    _add_weather_button(panel, "RAIN + FOG", Vector2(20.0, 165.0), "RAIN")
-
-func _add_weather_button(parent: Control, text_value: String, button_position: Vector2, weather_value: String) -> void:
-    var button := Button.new()
-    button.text = text_value
-    button.position = button_position
-    button.size = Vector2(280.0, 45.0)
-    button.focus_mode = Control.FOCUS_NONE
-    button.pressed.connect(_select_weather.bind(weather_value))
-    parent.add_child(button)
-
-func _select_weather(weather_value: String) -> void:
-    selected_weather = weather_value
-    _apply_weather(selected_weather)
-
-func _apply_weather(weather_value: String) -> void:
-    var world := get_node_or_null("WorldEnvironment") as WorldEnvironment
-    if not world:
-        return
-    var environment := world.environment
-    if weather_value == "NIGHT":
-        environment.background_color = Color(0.015, 0.025, 0.07)
-        environment.ambient_light_color = Color(0.2, 0.25, 0.45)
-        environment.ambient_light_energy = 0.42
-        environment.fog_enabled = true
-        environment.fog_light_color = Color(0.08, 0.11, 0.2)
-        environment.fog_density = 0.004
-        _set_rain(false)
-    elif weather_value == "RAIN":
-        environment.background_color = Color(0.045, 0.06, 0.085)
-        environment.ambient_light_color = Color(0.32, 0.38, 0.5)
-        environment.ambient_light_energy = 0.52
-        environment.fog_enabled = true
-        environment.fog_light_color = Color(0.28, 0.32, 0.38)
-        environment.fog_density = 0.016
-        _ensure_rain()
-        _set_rain(true)
-        _apply_wet_surface_response(true)
-    else:
-        environment.background_color = Color(0.08, 0.1, 0.14)
-        environment.ambient_light_color = Color(0.55, 0.6, 0.7)
-        environment.ambient_light_energy = 0.8
-        environment.fog_enabled = false
-        _set_rain(false)
-        _apply_wet_surface_response(false)
-
-func _set_rain(enabled: bool) -> void:
-    if is_instance_valid(rain_particles):
-        rain_particles.emitting = enabled
-
-func _apply_wet_surface_response(wet: bool) -> void:
-    for child in get_children():
-        if child.name.begins_with("CurvedRoad"):
-            var road_mesh := child.get_node_or_null("RoadMesh") as MeshInstance3D
-            if road_mesh and road_mesh.material_override is StandardMaterial3D:
-                var material := road_mesh.material_override as StandardMaterial3D
-                material.roughness = 0.56 if wet else 0.84
-                material.metallic = 0.18 if wet else 0.05
-                material.emission_enabled = wet
-                material.emission = Color(0.02, 0.035, 0.055)
-                material.emission_energy_multiplier = 0.12 if wet else 0.0
-
-func _ensure_rain() -> void:
-    if is_instance_valid(rain_particles):
-        rain_particles.emitting = true
-        return
-    rain_particles = GPUParticles3D.new()
-    rain_particles.name = "RainParticles"
-    rain_particles.amount = 260
-    rain_particles.lifetime = 0.8
-    rain_particles.visibility_aabb = AABB(Vector3(-35.0, -1.0, -80.0), Vector3(70.0, 28.0, 100.0))
-    var material := ParticleProcessMaterial.new()
-    material.direction = Vector3(0.0, -1.0, 0.0)
-    material.initial_velocity_min = 22.0
-    material.initial_velocity_max = 30.0
-    material.gravity = Vector3(0.0, -5.0, 0.0)
-    material.scale_min = 0.025
-    material.scale_max = 0.05
-    rain_particles.process_material = material
-    var mesh := BoxMesh.new()
-    mesh.size = Vector3(0.025, 0.35, 0.025)
-    rain_particles.draw_pass_1 = mesh
-    rain_particles.position = Vector3(4.0, 13.0, -25.0)
-    add_child(rain_particles)
-    rain_particles.emitting = true
 
 func _build_garage(parent: Control) -> void:
-    var garage_button := Button.new()
-    garage_button.text = "GARAGE"
-    garage_button.set_anchors_preset(Control.PRESET_CENTER)
-    garage_button.position = Vector2(-360.0, 315.0)
-    garage_button.size = Vector2(180.0, 58.0)
-    garage_button.focus_mode = Control.FOCUS_NONE
-    garage_button.add_theme_font_size_override("font_size", 20)
-    garage_button.pressed.connect(_open_garage)
-    parent.add_child(garage_button)
-
-func _open_garage() -> void:
-    if is_instance_valid(garage_overlay):
-        garage_overlay.queue_free()
-
-    garage_overlay = ColorRect.new()
-    garage_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    garage_overlay.color = Color(0.015, 0.02, 0.03, 0.96)
-    garage_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-    garage_overlay.z_index = 50
-    mode_overlay.add_child(garage_overlay)
-
-    var title := Label.new()
-    title.text = "🏪 GARAGE"
-    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    title.set_anchors_preset(Control.PRESET_CENTER)
-    title.position = Vector2(-360.0, -300.0)
-    title.size = Vector2(720.0, 65.0)
-    title.add_theme_font_size_override("font_size", 42)
-    garage_overlay.add_child(title)
-
-    garage_info_label = Label.new()
-    garage_info_label.text = "CAR: %s\nCOLOR: %s\nWHEELS: %s\nUPGRADE: %d/3\n\nSPEED: %d   ACCEL: %d   HANDLING: %.1f" % [_garage_car_name(), _garage_color_name(), selected_wheels, upgrade_level, _garage_speed(), _garage_accel(), _garage_handling()]
-    garage_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    garage_info_label.set_anchors_preset(Control.PRESET_CENTER)
-    garage_info_label.position = Vector2(-300.0, -180.0)
-    garage_info_label.size = Vector2(600.0, 190.0)
-    garage_info_label.add_theme_font_size_override("font_size", 25)
-    garage_overlay.add_child(garage_info_label)
-
-    var close_button := Button.new()
-    close_button.text = "BACK TO RACE SETUP"
-    close_button.set_anchors_preset(Control.PRESET_CENTER)
-    close_button.position = Vector2(-180.0, 190.0)
-    close_button.size = Vector2(360.0, 70.0)
-    close_button.focus_mode = Control.FOCUS_NONE
-    close_button.add_theme_font_size_override("font_size", 22)
-    close_button.pressed.connect(_close_garage)
-    garage_overlay.add_child(close_button)
-
-func _close_garage() -> void:
-    if is_instance_valid(garage_overlay):
-        garage_overlay.queue_free()
-        garage_overlay = null
-
-func _garage_car_name() -> String:
-    return selected_car
-
-func _garage_color_name() -> String:
-    if selected_color == Color(0.04, 0.08, 0.72):
-        return "BLUE"
-    if selected_color == Color(0.04, 0.55, 0.18):
-        return "GREEN"
-    return "RED"
-
-func _garage_speed() -> int:
-    var speed := 34
-    if selected_car == "MUSCLE":
-        speed = 30
-    elif selected_car == "GT":
-        speed = 38
-    elif selected_car == "SUPERCAR":
-        speed = 42
-    elif selected_car == "HYPER":
-        speed = 46
-    elif selected_car == "RALLY":
-        speed = 32
-    return speed + int(upgrade_level * 1.5)
-
-func _garage_accel() -> int:
-    var accel := 18
-    if selected_car == "MUSCLE":
-        accel = 20
-    elif selected_car == "GT":
-        accel = 16
-    elif selected_car == "SUPERCAR":
-        accel = 19
-    elif selected_car == "HYPER":
-        accel = 17
-    elif selected_car == "RALLY":
-        accel = 22
-    return accel + int(upgrade_level * 0.8)
-
-func _garage_handling() -> float:
-    if selected_car == "MUSCLE":
-        return 1.8
-    if selected_car == "GT":
-        return 2.4
-    if selected_car == "SUPERCAR":
-        return 2.6
-    if selected_car == "HYPER":
-        return 2.8
-    if selected_car == "RALLY":
-        return 2.15
-    return 2.2
-
-func _build_mode_select() -> void:
-    var canvas := CanvasLayer.new()
-    canvas.name = "ModeSelectUI"
-    canvas.layer = 40
-    add_child(canvas)
-
-    mode_overlay = ColorRect.new()
-    mode_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    mode_overlay.color = Color(0.015, 0.02, 0.035, 0.94)
-    mode_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-    canvas.add_child(mode_overlay)
-
-    var title := Label.new()
-    title.text = "🏎️ CAR RACE GAMES"
-    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    title.set_anchors_preset(Control.PRESET_CENTER)
-    title.position = Vector2(-360.0, -250.0)
-    title.size = Vector2(720.0, 80.0)
-    title.add_theme_font_size_override("font_size", 46)
-    mode_overlay.add_child(title)
-
-    mode_label = Label.new()
-    mode_label.text = "SELECT RACE MODE\nRace against AI opponents"
-    mode_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    mode_label.set_anchors_preset(Control.PRESET_CENTER)
-    mode_label.position = Vector2(-360.0, -150.0)
-    mode_label.size = Vector2(720.0, 90.0)
-    mode_label.add_theme_font_size_override("font_size", 24)
-    mode_overlay.add_child(mode_label)
-
-    _build_car_select(mode_overlay)
-
-    _add_mode_button(mode_overlay, "QUICK RACE", Vector2(-310.0, 45.0), "quick_race")
-    _add_mode_button(mode_overlay, "TIME TRIAL", Vector2(-105.0, 45.0), "time_trial")
-    _add_mode_button(mode_overlay, "CAREER", Vector2(100.0, 45.0), "career")
-
-    var start := Button.new()
-    start.text = "START RACE"
-    start.set_anchors_preset(Control.PRESET_CENTER)
-    start.position = Vector2(-170.0, 315.0)
-    start.size = Vector2(340.0, 78.0)
-    start.focus_mode = Control.FOCUS_NONE
-    start.add_theme_font_size_override("font_size", 28)
-    start.pressed.connect(_start_selected_mode)
-    mode_overlay.add_child(start)
-
-func _add_mode_button(parent: Control, text_value: String, button_position: Vector2, mode_value: String) -> void:
-    var button := Button.new()
-    button.text = text_value
-    button.set_anchors_preset(Control.PRESET_CENTER)
-    button.position = button_position
-    button.size = Vector2(190.0, 72.0)
-    button.focus_mode = Control.FOCUS_NONE
-    button.add_theme_font_size_override("font_size", 20)
-    button.pressed.connect(_select_mode.bind(mode_value))
-    parent.add_child(button)
-
-func _select_mode(mode_value: String) -> void:
-    selected_mode = mode_value
-    if mode_value == "time_trial":
-        mode_name = "TIME TRIAL"
-        mode_label.text = "TIME TRIAL\nRace alone and beat your best time"
-    elif mode_value == "career":
-        mode_name = "CAREER"
-        mode_label.text = "CAREER\nComplete a 3-lap championship race"
-    else:
-        mode_name = "QUICK RACE"
-        mode_label.text = "QUICK RACE\nRace against 3 AI opponents"
-
-func _start_selected_mode() -> void:
-    if is_instance_valid(mode_overlay):
-        mode_overlay.queue_free()
-    _show_loading_screen()
-    if selected_mode == "time_trial":
-        for ai in ai_opponents:
-            if is_instance_valid(ai):
-                ai.queue_free()
-        ai_opponents.clear()
-        total_laps = 1
-    elif selected_mode == "career":
-        total_laps = 3
-    else:
-        total_laps = 1
-    race_label.text = mode_name + " | " + selected_car + " 0%"
-    var car := get_node_or_null("PlayerCar")
-    if car and car.has_method("configure_car"):
-        car.configure_car(selected_car)
-        if car.has_method("customize_car"):
-            car.customize_car(selected_color, selected_wheels, upgrade_level)
-    get_tree().create_timer(0.7).timeout.connect(_finish_loading_screen)
-
-func _finish_loading_screen() -> void:
-    if is_instance_valid(loading_overlay):
-        var tween := create_tween()
-        tween.tween_property(loading_overlay, "modulate:a", 0.0, 0.35)
-        tween.finished.connect(func():
-            if is_instance_valid(loading_overlay):
-                loading_overlay.queue_free()
-                loading_overlay = null
-            _start_race_countdown()
-        )
-
-func _show_loading_screen() -> void:
-    var canvas := CanvasLayer.new()
-    canvas.name = "LoadingUI"
-    canvas.layer = 60
-    add_child(canvas)
-    loading_overlay = ColorRect.new()
-    loading_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    loading_overlay.color = Color(0.008, 0.012, 0.02, 1.0)
-    canvas.add_child(loading_overlay)
-    var title := Label.new()
-    title.text = "CAR RACE GAMES"
-    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    title.position = Vector2(0.0, 180.0)
-    title.size = Vector2(1280.0, 70.0)
-    title.add_theme_font_size_override("font_size", 44)
-    loading_overlay.add_child(title)
-    var info := Label.new()
-    info.text = "LOADING %s  •  %s  •  %s" % [selected_map, selected_weather, mode_name]
-    info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    info.position = Vector2(0.0, 290.0)
-    info.size = Vector2(1280.0, 50.0)
-    info.add_theme_font_size_override("font_size", 22)
-    loading_overlay.add_child(info)
-    var bar := ProgressBar.new()
-    bar.position = Vector2(290.0, 380.0)
-    bar.size = Vector2(700.0, 28.0)
-    bar.min_value = 0.0
-    bar.max_value = 1.0
-    bar.value = 0.0
-    bar.show_percentage = false
-    loading_overlay.add_child(bar)
-    var tween := create_tween()
-    tween.tween_property(bar, "value", 1.0, 0.65)
-    var status := Label.new()
-    status.text = "PREPARING RACE..." 
-    status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    status.position = Vector2(0.0, 440.0)
-    status.size = Vector2(1280.0, 40.0)
-    status.add_theme_font_size_override("font_size", 20)
-    loading_overlay.add_child(status)
-
-func _start_race_countdown() -> void:
-    countdown_label = Label.new()
-    countdown_label.name = "Countdown"
-    countdown_label.set_anchors_preset(Control.PRESET_CENTER)
-    countdown_label.position = Vector2(-180.0, -120.0)
-    countdown_label.size = Vector2(360.0, 120.0)
-    countdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    countdown_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-    countdown_label.add_theme_font_size_override("font_size", 72)
-    countdown_label.text = "3"
-    var canvas := get_node_or_null("RaceHUD") as CanvasLayer
-    if canvas:
-        canvas.add_child(countdown_label)
-    _countdown_step()
-
-func _countdown_step() -> void:
-    if not is_instance_valid(countdown_label):
-        return
-    var value := int(ceil(countdown_time))
-    if value > 0:
-        countdown_label.text = str(value)
-        countdown_time -= 1.0
-        get_tree().create_timer(1.0).timeout.connect(_countdown_step)
-    else:
-        countdown_label.text = "GO!"
-        race_started = true
-        for ai in ai_opponents:
-            if is_instance_valid(ai) and ai.has_method("start_race"):
-                ai.start_race()
-        var tween := create_tween()
-        tween.tween_property(countdown_label, "modulate:a", 0.0, 0.6)
-        tween.finished.connect(countdown_label.queue_free)
-
-func _update_ai_racing_behavior() -> void:
-    for i in range(ai_opponents.size()):
-        var ai := ai_opponents[i]
-        if not is_instance_valid(ai):
-            continue
-        var ai_script := ai as CharacterBody3D
-        if not ai_script:
-            continue
-        if ai_script.has_method("set_racing_skill"):
-            ai_script.set_racing_skill(ai_skill_profiles[min(i, ai_skill_profiles.size() - 1)])
-        if ai_script.has_method("set_racing_offset"):
-            ai_script.set_racing_offset(ai_racing_offsets[min(i, ai_racing_offsets.size() - 1)])
-
-func _update_ai_racing(delta: float) -> void:
-    if ai_opponents.is_empty():
-        return
-    for i in ai_opponents.size():
-        var ai := ai_opponents[i]
-        if not is_instance_valid(ai):
-            continue
-        var progress := _race_progress_for_position(ai.global_position)
-        if ai_race_progress.size() <= i:
-            ai_race_progress.append(progress)
-        else:
-            ai_race_progress[i] = progress
-    var player := get_node_or_null("PlayerCar")
-    var player_progress := 0.0
-    if player:
-        player_progress = _race_progress_for_position(player.global_position)
-    var ahead := 0
-    for progress in ai_race_progress:
-        if progress > player_progress:
-            ahead += 1
-    player_race_position = clamp(ahead + 1, 1, ai_opponents.size() + 1)
-    if is_instance_valid(position_label) and race_started and not race_finished:
-        position_label.text = "POSITION  %d/%d" % [player_race_position, ai_opponents.size() + 1]
-
-func _race_progress_for_position(position: Vector3) -> float:
-    if track_path.size() < 2:
-        return -position.z
-    var best_distance := INF
-    var best_progress := 0.0
-    var accumulated := 0.0
-    for i in track_path.size() - 1:
-        var a := track_path[i]
-        var b := track_path[i + 1]
-        var segment := b - a
-        var length := max(segment.length(), 0.001)
-        var t := clamp((position - a).dot(segment) / (length * length), 0.0, 1.0)
-        var closest := a.lerp(b, t)
-        var distance := position.distance_squared_to(closest)
-        if distance < best_distance:
-            best_distance = distance
-            best_progress = accumulated + length * t
-        accumulated += length
-    return best_progress
-
-func _build_ai_opponents() -> void:
-    var route: Array[Vector3] = track_path.duplicate()
-    var ai_script := load("res://scripts/ai_car.gd")
-    for i in range(ai_count):
-        var ai := CharacterBody3D.new()
-        ai.name = "AIOpponent%d" % (i + 1)
-        ai.position = Vector3(-2.5 + i * 2.5, 1.0, 17.0 + i * 2.0)
-        ai.set_script(ai_script)
-        add_child(ai)
-        ai.call("setup", route)
-        ai_opponents.append(ai)
-
-func _get_player_position_rank() -> int:
-    var player := get_node_or_null("PlayerCar")
-    if not player:
-        return 1
-    var player_progress := _race_progress_for_z(player.global_position.z)
-    var rank := 1
-    for ai in ai_opponents:
-        if is_instance_valid(ai):
-            if _race_progress_for_z(ai.global_position.z) > player_progress:
-                rank += 1
-    return rank
-
-func _race_progress_for_z(z_value: float) -> float:
-    return clamp((race_start_z - z_value) / max(abs(finish_z - race_start_z), 0.01), 0.0, 1.0)
-
-func _build_race_system() -> void:
-    _add_finish_line()
-    _add_race_checkpoints()
-
-    var canvas := CanvasLayer.new()
-    canvas.name = "RaceHUD"
-    add_child(canvas)
-
-    race_label = Label.new()
-    race_label.position = Vector2(28.0, 122.0)
-    race_label.size = Vector2(330.0, 34.0)
-    race_label.text = "RACE 0%"
-    race_label.add_theme_font_size_override("font_size", 22)
-    canvas.add_child(race_label)
-
-    race_bar = ProgressBar.new()
-    race_bar.position = Vector2(28.0, 160.0)
-    race_bar.size = Vector2(330.0, 18.0)
-    race_bar.min_value = 0.0
-    race_bar.max_value = 100.0
-    race_bar.value = 0.0
-    race_bar.show_percentage = false
-    canvas.add_child(race_bar)
-
-    checkpoint_label = Label.new()
-    checkpoint_label.name = "CheckpointInfo"
-    checkpoint_label.position = Vector2(28.0, 184.0)
-    checkpoint_label.size = Vector2(330.0, 30.0)
-    checkpoint_label.text = "FINISH: 81m"
-    checkpoint_label.add_theme_font_size_override("font_size", 16)
-    canvas.add_child(checkpoint_label)
-
-    timer_label = Label.new()
-    timer_label.position = Vector2(28.0, 218.0)
-    timer_label.size = Vector2(330.0, 30.0)
-    timer_label.text = "TIME 00:00.00"
-    timer_label.add_theme_font_size_override("font_size", 18)
-    canvas.add_child(timer_label)
-
-    position_label = Label.new()
-    position_label.position = Vector2(28.0, 250.0)
-    position_label.size = Vector2(330.0, 30.0)
-    position_label.text = "POSITION 1 / 1"
-    position_label.add_theme_font_size_override("font_size", 18)
-    canvas.add_child(position_label)
-
-    var lap_label := Label.new()
-    lap_label.name = "LapInfo"
-    lap_label.position = Vector2(28.0, 282.0)
-    lap_label.size = Vector2(330.0, 30.0)
-    lap_label.text = "LAP 1 / 1"
-    lap_label.add_theme_font_size_override("font_size", 18)
-    canvas.add_child(lap_label)
-
-func _add_race_checkpoints() -> void:
-    var checkpoint_positions := [Vector3(0.0, 1.0, -8.0), Vector3(5.0, 1.0, -30.0), Vector3(9.5, 1.4, -51.0)]
-    for i in range(checkpoint_positions.size()):
-        var checkpoint := Area3D.new()
-        checkpoint.name = "Checkpoint%d" % (i + 1)
-        checkpoint.position = checkpoint_positions[i]
-        var collision := CollisionShape3D.new()
-        var shape := BoxShape3D.new()
-        shape.size = Vector3(11.5, 2.2, 1.2)
-        collision.shape = shape
-        checkpoint.add_child(collision)
-        checkpoint.body_entered.connect(_on_checkpoint_body_entered.bind(i))
-        add_child(checkpoint)
-
-func _on_checkpoint_body_entered(body: Node3D, index: int) -> void:
-    if not race_started or race_finished or body.name != "PlayerCar" or index != current_checkpoint:
-        return
-    current_checkpoint += 1
-    if is_instance_valid(checkpoint_label):
-        checkpoint_label.text = "CHECKPOINT %d / %d" % [current_checkpoint, total_checkpoints] if current_checkpoint < total_checkpoints else "CHECKPOINTS COMPLETE"
-
-func _format_race_time(value: float) -> String:
-    var minutes := int(value / 60.0)
-    var seconds := fmod(value, 60.0)
-    return "%02d:%05.2f" % [minutes, seconds]
-
-func _add_finish_line() -> void:
-    var finish := Area3D.new()
-    finish.name = "FinishLine"
-    finish.position = Vector3(10.0, 1.05, -66.0)
-    add_child(finish)
-
-    var collision := CollisionShape3D.new()
-    var shape := BoxShape3D.new()
-    shape.size = Vector3(12.0, 2.2, 1.0)
-    collision.shape = shape
-    finish.add_child(collision)
-
-    var stripe := MeshInstance3D.new()
-    var stripe_mesh := BoxMesh.new()
-    stripe_mesh.size = Vector3(12.0, 0.06, 1.0)
-    stripe.mesh = stripe_mesh
-    stripe.position.y = -0.98
-    var stripe_material := StandardMaterial3D.new()
-    stripe_material.albedo_color = Color(1.0, 1.0, 1.0)
-    stripe_material.emission_enabled = true
-    stripe_material.emission = Color(0.5, 0.5, 0.5)
-    stripe.material_override = stripe_material
-    finish.add_child(stripe)
-
-    for x in [-4.5, -3.0, -1.5, 0.0, 1.5, 3.0, 4.5]:
-        var tile := MeshInstance3D.new()
-        var tile_mesh := BoxMesh.new()
-        tile_mesh.size = Vector3(1.5, 0.07, 1.02)
-        tile.mesh = tile_mesh
-        tile.position = Vector3(x, -0.93, 0.0)
-        var tile_material := StandardMaterial3D.new()
-        tile_material.albedo_color = Color(0.04 if int((x + 4.5) / 1.5) % 2 == 0 else 0.9, 0.04, 0.04)
-        tile.material_override = tile_material
-        finish.add_child(tile)
-
-    var arch_left := MeshInstance3D.new()
-    var arch_mesh := BoxMesh.new()
-    arch_mesh.size = Vector3(0.35, 3.0, 0.35)
-    arch_left.mesh = arch_mesh
-    arch_left.position = Vector3(-5.3, 1.5, 0.0)
-    finish.add_child(arch_left)
-
-    var arch_right := arch_left.duplicate()
-    arch_right.position.x = 5.3
-    finish.add_child(arch_right)
-
-    var banner := MeshInstance3D.new()
-    var banner_mesh := BoxMesh.new()
-    banner_mesh.size = Vector3(10.6, 0.65, 0.28)
-    banner.mesh = banner_mesh
-    banner.position = Vector3(0.0, 3.0, 0.0)
-    var banner_material := StandardMaterial3D.new()
-    banner_material.albedo_color = Color(0.08, 0.08, 0.1)
-    banner.material_override = banner_material
-    finish.add_child(banner)
-
-    finish.body_entered.connect(_on_finish_body_entered)
-
-func _process(delta: float) -> void:
-    _update_ai_racing(delta)
-    if race_finished:
-        return
-
-    var car := get_node_or_null("PlayerCar")
-    if not car:
-        return
-
-    if race_started:
-        race_elapsed += delta
-    _update_professional_mobile_hud()
-    if is_instance_valid(timer_label):
-        timer_label.text = "TIME " + _format_race_time(race_elapsed)
-    if is_instance_valid(position_label):
-        position_label.text = "POSITION %d / %d" % [_get_player_position_rank(), ai_opponents.size() + 1] if selected_mode != "time_trial" else "TIME TRIAL 1 / 1"
-    var lap_label := get_node_or_null("RaceHUD/LapInfo") as Label
-    if is_instance_valid(lap_label):
-        lap_label.text = "LAP %d / %d" % [lap, total_laps]
-
-    for ai in ai_opponents:
-        if is_instance_valid(ai) and not bool(ai.get("finished")) and ai.global_position.z <= finish_z:
-            ai.set("finished", true)
-            ai.set("race_active", false)
-            ai.set("velocity", Vector3.ZERO)
-
-    var distance_total := abs(finish_z - race_start_z)
-    var distance_done := clamp(abs(race_start_z - car.global_position.z), 0.0, distance_total)
-    var progress := clamp((distance_done / distance_total) * 100.0, 0.0, 100.0)
-    race_bar.value = progress
-    race_label.text = "RACE %d%%" % roundi(progress)
-
-    var remaining := max(0.0, distance_total - distance_done)
-    var checkpoint := get_node_or_null("RaceHUD/CheckpointInfo")
-    if checkpoint:
-        checkpoint.text = "FINISH: %dm" % roundi(remaining)
-
-func _on_finish_body_entered(body: Node3D) -> void:
-    if race_finished or body.name != "PlayerCar":
-        return
-    if not race_started or current_checkpoint < total_checkpoints:
-        if is_instance_valid(checkpoint_label):
-            checkpoint_label.text = "PASS CHECKPOINTS FIRST"
-        return
-
-    if selected_mode == "career" and lap < total_laps:
-        lap += 1
-        current_checkpoint = 0
-        var car := get_node_or_null("PlayerCar")
-        if car:
-            car.global_position = Vector3(0.0, 1.0, race_start_z)
-            car.velocity = Vector3.ZERO
-            car.rotation_degrees = Vector3.ZERO
-        if is_instance_valid(checkpoint_label):
-            checkpoint_label.text = "LAP %d / %d" % [lap, total_laps]
-        return
-
-    race_finished = true
-    _grant_race_rewards()
-    var car := get_node_or_null("PlayerCar")
-    if car and car.has_method("set_finish_cinematic"):
-        car.set_finish_cinematic(true)
-    _show_finish_overlay()
-
-func _show_finish_overlay() -> void:
-    if is_instance_valid(mobile_controls):
-        mobile_controls.visible = false
-
-    finish_overlay = ColorRect.new()
-    finish_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    finish_overlay.color = Color(0.005, 0.008, 0.015, 0.94)
-    finish_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-
-    var canvas := CanvasLayer.new()
-    canvas.name = "ResultsUI"
-    canvas.layer = 30
-    results_canvas = canvas
-    add_child(canvas)
-    canvas.add_child(finish_overlay)
-
-    var title := Label.new()
-    title.text = "🏆 RACE RESULTS"
-    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    title.set_anchors_preset(Control.PRESET_CENTER)
-    title.position = Vector2(-320.0, -140.0)
-    title.size = Vector2(640.0, 100.0)
-    title.add_theme_font_size_override("font_size", 54)
-    finish_overlay.add_child(title)
-
-    var message := Label.new()
-    var position := _get_player_position_rank()
-    var reward := _calculate_race_reward()
-    var is_new_best := best_time > 0.0 and race_elapsed <= best_time
-    message.text = "%s  •  %s  •  %s" % [mode_name, selected_map, selected_weather]
-
-    result_time_label = Label.new()
-    result_time_label.text = "TIME  " + _format_race_time(race_elapsed) + "\nPOSITION  " + str(position) + " / " + str(ai_opponents.size() + 1) + "\nREWARD  +" + str(reward[0]) + " COINS   +" + str(reward[1]) + " XP\nBEST  " + _format_race_time(best_time) + ("\n⭐ NEW BEST!" if is_new_best else "")
-    result_time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    result_time_label.set_anchors_preset(Control.PRESET_CENTER)
-    result_time_label.position = Vector2(-320.0, 5.0)
-    result_time_label.size = Vector2(640.0, 45.0)
-    result_time_label.add_theme_font_size_override("font_size", 28)
-    finish_overlay.add_child(result_time_label)
-    message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    message.set_anchors_preset(Control.PRESET_CENTER)
-    message.position = Vector2(-320.0, -48.0)
-    message.size = Vector2(640.0, 50.0)
-    message.add_theme_font_size_override("font_size", 24)
-    finish_overlay.add_child(message)
-
-    finish_button = Button.new()
-    finish_button.text = "🏁 RACE AGAIN"
-    finish_button.set_anchors_preset(Control.PRESET_CENTER)
-    finish_button.position = Vector2(-300.0, 135.0)
-    finish_button.size = Vector2(280.0, 80.0)
-    finish_button.focus_mode = Control.FOCUS_NONE
-    finish_button.add_theme_font_size_override("font_size", 28)
-    finish_button.pressed.connect(_restart_game)
-    finish_overlay.add_child(finish_button)
-
-    var menu_button := Button.new()
-    menu_button.text = "🏠 MAIN MENU"
-    menu_button.set_anchors_preset(Control.PRESET_CENTER)
-    menu_button.position = Vector2(20.0, 135.0)
-    menu_button.size = Vector2(280.0, 70.0)
-    menu_button.focus_mode = Control.FOCUS_NONE
-    menu_button.add_theme_font_size_override("font_size", 24)
-    menu_button.pressed.connect(_return_to_main_menu)
-    finish_overlay.add_child(menu_button)
-
-func _return_to_main_menu() -> void:
-    if is_instance_valid(results_canvas):
-        results_canvas.queue_free()
-        results_canvas = null
-    race_finished = false
-    race_started = false
-    race_elapsed = 0.0
-    countdown_time = 3.0
-    current_checkpoint = 0
-    lap = 1
-    if is_instance_valid(mobile_controls):
-        mobile_controls.visible = true
-    _build_mode_select()
-
-func _build_professional_mobile_hud() -> void:
-    var canvas := CanvasLayer.new()
-    canvas.name = "ProfessionalMobileHUD"
-    canvas.layer = 9
-    add_child(canvas)
-
-    var safe_root := Control.new()
-    safe_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    safe_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    canvas.add_child(safe_root)
-
-    var top_left := MarginContainer.new()
-    top_left.set_anchors_preset(Control.PRESET_TOP_LEFT)
-    top_left.position = Vector2(24.0, 24.0)
-    top_left.add_theme_constant_override("margin_left", 0)
-    top_left.add_theme_constant_override("margin_top", 0)
-    safe_root.add_child(top_left)
-
-    var info := Label.new()
-    info.text = "RACE"
-    info.add_theme_font_size_override("font_size", 22)
-    top_left.add_child(info)
-
-    var speed_panel := Panel.new()
-    speed_panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-    speed_panel.position = Vector2(-140.0, -145.0)
-    speed_panel.size = Vector2(280.0, 125.0)
-    var panel_style := StyleBoxFlat.new()
-    panel_style.bg_color = Color(0.015, 0.02, 0.03, 0.82)
-    panel_style.corner_radius_top_left = 22
-    panel_style.corner_radius_top_right = 22
-    panel_style.corner_radius_bottom_left = 22
-    panel_style.corner_radius_bottom_right = 22
-    panel_style.border_width_left = 2
-    panel_style.border_width_top = 2
-    panel_style.border_width_right = 2
-    panel_style.border_width_bottom = 2
-    panel_style.border_color = Color(1.0, 1.0, 1.0, 0.22)
-    speed_panel.add_theme_stylebox_override("panel", panel_style)
-    canvas.add_child(speed_panel)
-
-    speed_label = Label.new()
-    speed_label.text = "0 KM/H"
-    speed_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    speed_label.position = Vector2(10.0, 8.0)
-    speed_label.size = Vector2(260.0, 48.0)
-    speed_label.add_theme_font_size_override("font_size", 34)
-    speed_panel.add_child(speed_label)
-
-    speed_bar = ProgressBar.new()
-    speed_bar.position = Vector2(20.0, 68.0)
-    speed_bar.size = Vector2(240.0, 18.0)
-    speed_bar.min_value = 0.0
-    speed_bar.max_value = 100.0
-    speed_bar.show_percentage = false
-    speed_panel.add_child(speed_bar)
-
-    var mini_panel := Panel.new()
-    mini_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-    mini_panel.position = Vector2(-170.0, 35.0)
-    mini_panel.size = Vector2(145.0, 220.0)
-    mini_panel.add_theme_stylebox_override("panel", panel_style)
-    canvas.add_child(mini_panel)
-
-    var mini_title := Label.new()
-    mini_title.text = "TRACK"
-    mini_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    mini_title.position = Vector2(5.0, 8.0)
-    mini_title.size = Vector2(135.0, 30.0)
-    mini_title.add_theme_font_size_override("font_size", 17)
-    mini_panel.add_child(mini_title)
-
-    mini_progress = ProgressBar.new()
-    mini_progress.position = Vector2(53.0, 48.0)
-    mini_progress.size = Vector2(38.0, 150.0)
-    mini_progress.min_value = 0.0
-    mini_progress.max_value = 100.0
-    mini_progress.value = 0.0
-    mini_progress.show_percentage = false
-    mini_panel.add_child(mini_progress)
-
-func _update_professional_mobile_hud() -> void:
-    var car := get_node_or_null("PlayerCar")
-    if not car:
-        return
-    var speed := abs(car.velocity.length()) * 3.6
-    if is_instance_valid(speed_label):
-        speed_label.text = "%d KM/H" % roundi(speed)
-    if is_instance_valid(speed_bar):
-        speed_bar.value = clamp(speed / 1.8, 0.0, 100.0)
-    if is_instance_valid(mini_progress):
-        mini_progress.value = race_bar.value if is_instance_valid(race_bar) else 0.0
-
-func _build_rewards_hud() -> void:
-    var canvas := CanvasLayer.new()
-    canvas.name = "RewardsHUD"
-    canvas.layer = 8
-    add_child(canvas)
-
-    coins_label = Label.new()
-    coins_label.text = "COINS 0   XP 0"
-    coins_label.position = Vector2(28.0, 118.0)
-    coins_label.size = Vector2(330.0, 38.0)
-    coins_label.add_theme_font_size_override("font_size", 22)
-    canvas.add_child(coins_label)
-
-    var achievements_button := Button.new()
-    achievements_button.text = "🏅 ACHIEVEMENTS"
-    achievements_button.position = Vector2(28.0, 158.0)
-    achievements_button.size = Vector2(220.0, 42.0)
-    achievements_button.pressed.connect(_open_achievements)
-    canvas.add_child(achievements_button)
-
-func _update_rewards_hud() -> void:
-    if is_instance_valid(coins_label):
-        coins_label.text = "COINS %d   XP %d" % [coins, xp]
-
-func _calculate_race_reward() -> Array[int]:
-    var base_coins := 50
-    var base_xp := 100
-    if selected_mode == "time_trial":
-        base_coins = 75
-        base_xp = 125
-    elif selected_mode == "career":
-        base_coins = 100
-        base_xp = 180
-    var rank_bonus := 0
-    if selected_mode != "time_trial":
-        var rank := _get_player_position_rank()
-        rank_bonus = max(0, (ai_opponents.size() + 1 - rank) * 25)
-    return [base_coins + rank_bonus, base_xp + rank_bonus * 2]
-
-func _grant_race_rewards() -> void:
-    var reward := _calculate_race_reward()
-    var reward_multiplier := career_reward_multiplier if selected_mode == "career" else 1.0
-    var earned_coins := int(round(float(reward[0]) * reward_multiplier))
-    var earned_xp := int(round(float(reward[1]) * reward_multiplier))
-    coins += earned_coins
-    xp += earned_xp
-    total_races += 1
-    if selected_mode == "career":
-        career_races += 1
-        var stars := 1
-        if race_elapsed <= maxf(best_time * 1.08, 0.01) or career_races == 1:
-            stars = 2
-        if race_elapsed <= maxf(best_time * 0.94, 0.01) and best_time > 0.0:
-            stars = 3
-        career_stars += stars
-        career_wins += 1
-        if career_wins % 3 == 0:
-            career_level += 1
-            career_reward_multiplier = 1.0 + float(career_level - 1) * 0.15
-    if best_time <= 0.0 or race_elapsed < best_time:
-        best_time = race_elapsed
-    _check_achievements()
-    _update_leaderboard()
-    _save_progress()
-    _update_rewards_hud()
-
-func _check_achievements() -> void:
-    var unlocked := false
-    if total_races >= 1 and not achievements.has("FIRST_RACE"):
-        achievements.append("FIRST_RACE")
-        unlocked = true
-    if total_races >= 5 and not achievements.has("FIVE_RACES"):
-        achievements.append("FIVE_RACES")
-        unlocked = true
-    if coins >= 500 and not achievements.has("500_COINS"):
-        achievements.append("500_COINS")
-        unlocked = true
-    if coins >= 1000 and not achievements.has("1000_COINS"):
-        achievements.append("1000_COINS")
-        unlocked = true
-    if upgrade_level >= 3 and not achievements.has("MAX_UPGRADE"):
-        achievements.append("MAX_UPGRADE")
-        unlocked = true
-    if career_level >= 3 and not achievements.has("CAREER_LEVEL_3"):
-        achievements.append("CAREER_LEVEL_3")
-        unlocked = true
-    if career_stars >= 10 and not achievements.has("TEN_CAREER_STARS"):
-        achievements.append("TEN_CAREER_STARS")
-        unlocked = true
-    if selected_map == "HIGHWAY" and not achievements.has("HIGHWAY_RACER"):
-        achievements.append("HIGHWAY_RACER")
-        unlocked = true
-    if selected_map == "DESERT" and not achievements.has("DESERT_RACER"):
-        achievements.append("DESERT_RACER")
-        unlocked = true
-    if selected_weather == "RAIN" and not achievements.has("RAIN_RACER"):
-        achievements.append("RAIN_RACER")
-        unlocked = true
-    if unlocked:
-        _update_rewards_hud()
-
-func _open_achievements() -> void:
-    if is_instance_valid(achievements_overlay):
-        achievements_overlay.queue_free()
-
-    achievements_overlay = ColorRect.new()
-    achievements_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    achievements_overlay.color = Color(0.01, 0.01, 0.02, 0.9)
-    achievements_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-
-    var canvas := CanvasLayer.new()
-    canvas.name = "AchievementsUI"
-    canvas.layer = 35
-    add_child(canvas)
-    canvas.add_child(achievements_overlay)
-
-    var title := Label.new()
-    title.text = "🏅 ACHIEVEMENTS  %d/10" % achievements.size()
-    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    title.position = Vector2(0.0, 70.0)
-    title.size = Vector2(1280.0, 60.0)
-    title.add_theme_font_size_override("font_size", 38)
-    achievements_overlay.add_child(title)
-
-    var definitions := [
-        ["FIRST_RACE", "First Race", "Complete your first race"],
-        ["FIVE_RACES", "Race Veteran", "Complete 5 races"],
-        ["500_COINS", "Coin Collector", "Earn 500 coins"],
-        ["1000_COINS", "Coin Master", "Earn 1000 coins"],
-        ["MAX_UPGRADE", "Fully Tuned", "Reach upgrade level 3"],
-        ["CAREER_LEVEL_3", "Career Star", "Reach career level 3"],
-        ["TEN_CAREER_STARS", "Star Driver", "Earn 10 career stars"],
-        ["HIGHWAY_RACER", "Highway Racer", "Race on Highway"],
-        ["DESERT_RACER", "Desert Racer", "Race in Desert"],
-        ["RAIN_RACER", "Rain Driver", "Race in Rain"]
-    ]
-
-    var list := Label.new()
-    var lines := []
-    for item in definitions:
-        var state := "✅" if achievements.has(item[0]) else "🔒"
-        lines.append("%s  %s — %s" % [state, item[1], item[2]])
-    list.text = "\n\n".join(lines)
-    list.position = Vector2(180.0, 165.0)
-    list.size = Vector2(920.0, 440.0)
-    list.add_theme_font_size_override("font_size", 24)
-    achievements_overlay.add_child(list)
-
-    var close := Button.new()
-    close.text = "CLOSE"
-    close.position = Vector2(510.0, 625.0)
-    close.size = Vector2(260.0, 55.0)
-    close.pressed.connect(func():
-        if is_instance_valid(achievements_overlay):
-            achievements_overlay.queue_free()
-            achievements_overlay = null
-    )
-    achievements_overlay.add_child(close)
-
-func _save_progress() -> void:
-    var data := {
-        "coins": coins,
-        "xp": xp,
-        "selected_mode": selected_mode,
-        "selected_car": selected_car,
-        "selected_color": [selected_color.r, selected_color.g, selected_color.b, selected_color.a],
-        "selected_wheels": selected_wheels,
-        "upgrade_level": upgrade_level,
-        "selected_weather": selected_weather,
-        "selected_map": selected_map,
-        "total_races": total_races,
-        "best_time": best_time,
-        "achievements": achievements,
-        "leaderboard_entries": leaderboard_entries,
-        "career_level": career_level,
-        "career_wins": career_wins,
-        "career_races": career_races,
-        "career_stars": career_stars,
-        "save_version": 2
-    }
-    var json_text := JSON.stringify(data)
-    var file := FileAccess.open(save_path, FileAccess.WRITE)
-    if file:
-        file.store_string(json_text)
-        file.close()
-
-func _load_progress() -> void:
-    if not FileAccess.file_exists(save_path):
-        return
-    var file := FileAccess.open(save_path, FileAccess.READ)
-    if not file:
-        return
-    var parsed = JSON.parse_string(file.get_as_text())
-    if typeof(parsed) != TYPE_DICTIONARY:
-        return
-    coins = int(parsed.get("coins", 0))
-    xp = int(parsed.get("xp", 0))
-    selected_mode = str(parsed.get("selected_mode", "quick_race"))
-    if selected_mode not in ["quick_race", "career", "time_trial"]:
-        selected_mode = "quick_race"
-    selected_car = str(parsed.get("selected_car", "SPORTS"))
-    if selected_car not in ["SPORTS", "MUSCLE", "GT", "SUPERCAR", "HYPER", "RALLY"]:
-        selected_car = "SPORTS"
-    selected_wheels = str(parsed.get("selected_wheels", "SPORT"))
-    if selected_wheels not in ["SPORT", "BLACK", "GOLD"]:
-        selected_wheels = "SPORT"
-    upgrade_level = clampi(int(parsed.get("upgrade_level", 0)), 0, 3)
-    selected_weather = str(parsed.get("selected_weather", "DAY"))
-    if selected_weather not in ["DAY", "NIGHT", "RAIN"]:
-        selected_weather = "DAY"
-    selected_map = str(parsed.get("selected_map", "CITY"))
-    if selected_map not in ["CITY", "HIGHWAY", "DESERT"]:
-        selected_map = "CITY"
-    total_races = int(parsed.get("total_races", 0))
-    best_time = float(parsed.get("best_time", 0.0))
-    achievements = Array(parsed.get("achievements", []))
-    leaderboard_entries = Array(parsed.get("leaderboard_entries", []))
-    career_level = maxi(1, int(parsed.get("career_level", 1)))
-    career_wins = int(parsed.get("career_wins", 0))
-    career_races = int(parsed.get("career_races", 0))
-    career_stars = int(parsed.get("career_stars", 0))
-    career_reward_multiplier = 1.0 + float(maxi(0, career_level - 1)) * 0.15
-    var color_data = parsed.get("selected_color", [0.82, 0.025, 0.02, 1.0])
-    if color_data is Array and color_data.size() >= 4:
-        selected_color = Color(float(color_data[0]), float(color_data[1]), float(color_data[2]), float(color_data[3]))
-
-func _reset_saved_progress() -> void:
-    coins = 0
-    xp = 0
-    total_races = 0
-    best_time = 0.0
-    selected_mode = "quick_race"
-    selected_car = "SPORTS"
-    selected_color = Color(0.82, 0.025, 0.02)
-    selected_wheels = "SPORT"
-    upgrade_level = 0
-    selected_weather = "DAY"
-    selected_map = "CITY"
-    achievements.clear()
-    leaderboard_entries.clear()
-    career_level = 1
-    career_wins = 0
-    career_races = 0
-    career_stars = 0
-    career_reward_multiplier = 1.0
-    _save_progress()
-    _update_rewards_hud()
-
-
-func _build_health_hud() -> void:
-    var canvas := CanvasLayer.new()
-    canvas.name = "GameHUD"
-    add_child(canvas)
-
-    var panel := Panel.new()
-    panel.position = Vector2(28.0, 28.0)
-    panel.size = Vector2(330.0, 82.0)
-
-    var panel_style := StyleBoxFlat.new()
-    panel_style.bg_color = Color(0.02, 0.02, 0.03, 0.78)
-    panel_style.corner_radius_top_left = 14
-    panel_style.corner_radius_top_right = 14
-    panel_style.corner_radius_bottom_left = 14
-    panel_style.corner_radius_bottom_right = 14
-    panel.add_theme_stylebox_override("panel", panel_style)
-    canvas.add_child(panel)
-
-    health_label = Label.new()
-    health_label.position = Vector2(18.0, 10.0)
-    health_label.size = Vector2(290.0, 28.0)
-    health_label.text = "HP 100 / 100"
-    health_label.add_theme_font_size_override("font_size", 22)
-    panel.add_child(health_label)
-
-    health_bar = ProgressBar.new()
-    health_bar.position = Vector2(18.0, 46.0)
-    health_bar.size = Vector2(294.0, 22.0)
-    health_bar.min_value = 0.0
-    health_bar.max_value = 100.0
-    health_bar.value = 100.0
-    health_bar.show_percentage = false
-    panel.add_child(health_bar)
-
-func _build_game_over_ui() -> void:
-    var canvas := CanvasLayer.new()
-    canvas.name = "GameOverUI"
-    canvas.layer = 20
-    add_child(canvas)
-
-    game_over_overlay = ColorRect.new()
-    game_over_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    game_over_overlay.color = Color(0.0, 0.0, 0.0, 0.72)
-    game_over_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-    game_over_overlay.visible = false
-    canvas.add_child(game_over_overlay)
-
-    game_over_title = Label.new()
-    game_over_title.text = "GAME OVER"
-    game_over_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    game_over_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-    game_over_title.set_anchors_preset(Control.PRESET_CENTER)
-    game_over_title.position = Vector2(-300.0, -120.0)
-    game_over_title.size = Vector2(600.0, 100.0)
-    game_over_title.add_theme_font_size_override("font_size", 64)
-    game_over_overlay.add_child(game_over_title)
-
-    var message := Label.new()
-    message.text = "Your car has been destroyed"
-    message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    message.set_anchors_preset(Control.PRESET_CENTER)
-    message.position = Vector2(-300.0, -20.0)
-    message.size = Vector2(600.0, 50.0)
-    message.add_theme_font_size_override("font_size", 24)
-    game_over_overlay.add_child(message)
-
-    restart_button = Button.new()
-    restart_button.text = "RESTART"
-    restart_button.set_anchors_preset(Control.PRESET_CENTER)
-    restart_button.position = Vector2(-140.0, 55.0)
-    restart_button.size = Vector2(280.0, 80.0)
-    restart_button.focus_mode = Control.FOCUS_NONE
-    restart_button.add_theme_font_size_override("font_size", 28)
-    restart_button.pressed.connect(_restart_game)
-    game_over_overlay.add_child(restart_button)
-
-func _on_game_over() -> void:
-    if is_instance_valid(mobile_controls):
-        mobile_controls.visible = false
-    if is_instance_valid(game_over_overlay):
-        game_over_overlay.visible = true
-
-func _restart_game() -> void:
-    var car := get_node_or_null("PlayerCar")
-    if car and car.has_method("restart_game"):
-        car.restart_game()
-
-func _on_health_changed(current_health: float, maximum_health: float) -> void:
-    if not is_instance_valid(health_bar):
-        return
-
-    health_bar.max_value = maximum_health
-    health_bar.value = current_health
-    health_label.text = "HP %d / %d" % [roundi(current_health), roundi(maximum_health)]
-
-func _build_mobile_controls() -> void:
-    mobile_controls = CanvasLayer.new()
-    mobile_controls.name = "MobileControls"
-    mobile_controls.layer = 10
-    add_child(mobile_controls)
-
-    var title := Label.new()
-    title.text = "DRIVE"
-    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    title.add_theme_font_size_override("font_size", 18)
-    title.modulate = Color(1.0, 1.0, 1.0, 0.65)
-    title.set_anchors_preset(Control.PRESET_TOP_WIDE)
-    title.position = Vector2(0.0, 18.0)
-    title.size = Vector2(1280.0, 30.0)
-    mobile_controls.add_child(title)
-
-    _add_touch_button(mobile_controls, "LEFT", "steer_left", Vector2(30.0, 585.0), Vector2(145.0, 100.0))
-    _add_touch_button(mobile_controls, "RIGHT", "steer_right", Vector2(190.0, 585.0), Vector2(145.0, 100.0))
-    _add_touch_button(mobile_controls, "BRAKE", "brake", Vector2(955.0, 585.0), Vector2(145.0, 100.0))
-    _add_touch_button(mobile_controls, "GO", "accelerate", Vector2(1105.0, 585.0), Vector2(145.0, 100.0))
-
-func _add_touch_button(parent: CanvasLayer, label_text: String, action: String, button_position: Vector2, button_size: Vector2) -> void:
-    var button := Button.new()
-    button.text = label_text
-    button.position = button_position
-    button.size = button_size
-    button.focus_mode = Control.FOCUS_NONE
-    button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-    button.add_theme_font_size_override("font_size", 24)
-
-    var normal := StyleBoxFlat.new()
-    normal.bg_color = Color(0.05, 0.05, 0.08, 0.72)
-    normal.corner_radius_top_left = 18
-    normal.corner_radius_top_right = 18
-    normal.corner_radius_bottom_left = 18
-    normal.corner_radius_bottom_right = 18
-    normal.border_width_left = 2
-    normal.border_width_top = 2
-    normal.border_width_right = 2
-    normal.border_width_bottom = 2
-    normal.border_color = Color(1.0, 1.0, 1.0, 0.45)
-
-    var pressed := normal.duplicate()
-    pressed.bg_color = Color(0.25, 0.55, 0.95, 0.9)
-
-    button.add_theme_stylebox_override("normal", normal)
-    button.add_theme_stylebox_override("hover", normal)
-    button.add_theme_stylebox_override("pressed", pressed)
-
-    button.button_down.connect(_on_control_down.bind(action))
-    button.button_up.connect(_on_control_up.bind(action))
-    parent.add_child(button)
-
-func _on_control_down(action: String) -> void:
-    Input.action_press(action)
-
-func _on_control_up(action: String) -> void:
-    Input.action_release(action)
+    var label := Label.new()
+    label.text = "Garage"
+    label.position = Vector2(-20.0, 350.0)
+    parent.add_child(label)
