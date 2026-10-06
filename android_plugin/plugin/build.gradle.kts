@@ -9,6 +9,10 @@ android {
     namespace = pluginPackageName
     compileSdk = 35
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         minSdk = 24
         manifestPlaceholders["godotPluginName"] = pluginName
