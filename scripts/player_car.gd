@@ -133,6 +133,7 @@ func configure_car(model_name: String) -> void:
     acceleration = car_acceleration
     steering_response = car_steering
     _apply_model_visual_profile()
+    _apply_model_design()
 
 func _ready() -> void:
     health = max_health
@@ -755,6 +756,46 @@ func _apply_car_style() -> void:
         body.material_override = _material(colors.get(car_model, colors["SPORTS"]), 0.55, 0.2)
     if hood:
         hood.material_override = _material(colors.get(car_model, colors["SPORTS"]), 0.6, 0.18)
+
+func _apply_model_design() -> void:
+    var body_root := get_node_or_null("CarVisual")
+    if not body_root:
+        return
+    var body := body_root.get_node_or_null("Body") as MeshInstance3D
+    var hood := body_root.get_node_or_null("Hood") as MeshInstance3D
+    var roof := body_root.get_node_or_null("Roof") as MeshInstance3D
+    var spoiler := body_root.get_node_or_null("SpoilerWing") as MeshInstance3D
+    if body:
+        body.scale = Vector3.ONE
+    if hood:
+        hood.scale = Vector3.ONE
+    if roof:
+        roof.scale = Vector3.ONE
+    if spoiler:
+        spoiler.scale = Vector3.ONE
+    if car_model == "MUSCLE":
+        if body: body.scale = Vector3(1.1, 1.05, 1.02)
+        if hood: hood.scale = Vector3(1.04, 1.12, 1.12)
+        if roof: roof.scale = Vector3(1.06, 0.96, 1.1)
+    elif car_model == "GT":
+        if body: body.scale = Vector3(1.02, 0.94, 1.1)
+        if hood: hood.scale = Vector3(1.0, 0.9, 1.18)
+        if roof: roof.scale = Vector3(0.98, 0.9, 1.02)
+    elif car_model == "SUPERCAR":
+        if body: body.scale = Vector3(1.03, 0.84, 1.12)
+        if hood: hood.scale = Vector3(0.98, 0.76, 1.25)
+        if roof: roof.scale = Vector3(0.92, 0.82, 0.98)
+        if spoiler: spoiler.scale = Vector3(1.05, 0.9, 0.9)
+    elif car_model == "HYPER":
+        if body: body.scale = Vector3(1.0, 0.8, 1.16)
+        if hood: hood.scale = Vector3(0.94, 0.7, 1.3)
+        if roof: roof.scale = Vector3(0.88, 0.78, 0.94)
+        if spoiler: spoiler.scale = Vector3(1.12, 0.82, 0.82)
+    elif car_model == "RALLY":
+        if body: body.scale = Vector3(1.04, 1.08, 1.0)
+        if hood: hood.scale = Vector3(1.02, 1.04, 1.0)
+        if roof: roof.scale = Vector3(1.04, 1.08, 1.02)
+        if spoiler: spoiler.scale = Vector3(1.02, 1.15, 1.0)
 
 func _build_car() -> void:
     var collision := get_node("CollisionShape3D") as CollisionShape3D
