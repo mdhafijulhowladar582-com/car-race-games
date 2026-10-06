@@ -72,6 +72,11 @@ var settings_path := "user://car_race_settings.json"
 var leaderboard_overlay: ColorRect
 var leaderboard_label: Label
 var leaderboard_entries: Array = []
+var career_level := 1
+var career_wins := 0
+var career_races := 0
+var career_stars := 0
+var career_reward_multiplier := 1.0
 
 var race_start_z := 15.0
 var finish_z := -66.0
@@ -1947,9 +1952,24 @@ func _calculate_race_reward() -> Array[int]:
 
 func _grant_race_rewards() -> void:
     var reward := _calculate_race_reward()
-    coins += reward[0]
-    xp += reward[1]
+    var reward_multiplier := career_reward_multiplier if selected_mode == "career" else 1.0
+    var earned_coins := int(round(float(reward[0]) * reward_multiplier))
+    var earned_xp := int(round(float(reward[1]) * reward_multiplier))
+    coins += earned_coins
+    xp += earned_xp
     total_races += 1
+    if selected_mode == "career":
+        career_races += 1
+        var stars := 1
+        if race_elapsed <= maxf(best_time * 1.08, 0.01) or career_races == 1:
+            stars = 2
+        if race_elapsed <= maxf(best_time * 0.94, 0.01) and best_time > 0.0:
+            stars = 3
+        career_stars += stars
+        career_wins += 1
+        if career_wins % 3 == 0:
+            career_level += 1
+            career_reward_multiplier = 1.0 + float(career_level - 1) * 0.15
     if best_time <= 0.0 or race_elapsed < best_time:
         best_time = race_elapsed
     if total_races >= 1 and not achievements.has("FIRST_RACE"):
@@ -1974,7 +1994,11 @@ func _save_progress() -> void:
         "total_races": total_races,
         "best_time": best_time,
         "achievements": achievements,
-        "leaderboard_entries": leaderboard_entries
+        "leaderboard_entries": leaderboard_entries,
+        "career_level": career_level,
+        "career_wins": career_wins,
+        "career_races": career_races,
+        "career_stars": career_stars
     }
     var file := FileAccess.open(save_path, FileAccess.WRITE)
     if file:
@@ -2001,6 +2025,11 @@ func _load_progress() -> void:
     best_time = float(parsed.get("best_time", 0.0))
     achievements = Array(parsed.get("achievements", []))
     leaderboard_entries = Array(parsed.get("leaderboard_entries", []))
+    career_level = maxi(1, int(parsed.get("career_level", 1)))
+    career_wins = int(parsed.get("career_wins", 0))
+    career_races = int(parsed.get("career_races", 0))
+    career_stars = int(parsed.get("career_stars", 0))
+    career_reward_multiplier = 1.0 + float(maxi(0, career_level - 1)) * 0.15
     var color_data = parsed.get("selected_color", [0.82, 0.025, 0.02, 1.0])
     if color_data is Array and color_data.size() >= 4:
         selected_color = Color(float(color_data[0]), float(color_data[1]), float(color_data[2]), float(color_data[3]))
