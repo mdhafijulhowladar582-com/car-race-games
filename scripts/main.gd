@@ -79,6 +79,7 @@ func _ready() -> void:
     _build_road()
     _build_professional_track()
     _build_environment_scenery()
+    _build_professional_environment()
     _build_premium_environment()
     _build_scenery()
     _build_ambience_audio()
@@ -156,6 +157,92 @@ func _build_environment() -> void:
     light.rotation_degrees = Vector3(-55.0, -25.0, 0.0)
     light.light_energy = 1.2
     add_child(light)
+
+func _build_professional_environment() -> void:
+    var road_side := _make_material(Color(0.16, 0.19, 0.17), 0.0, 0.9)
+    var rock := _make_material(Color(0.18, 0.2, 0.22), 0.0, 1.0)
+    var tree_leaf := _make_material(Color(0.05, 0.2, 0.08), 0.0, 0.95)
+    var tree_trunk := _make_material(Color(0.24, 0.12, 0.05), 0.0, 1.0)
+    var sign_material := _make_emission_material(Color(0.95, 0.72, 0.12), 0.25)
+    for i in range(9):
+        var z := 12.0 - float(i) * 8.5
+        _add_environment_tree(Vector3(-10.5 - float(i % 2), 0.0, z), tree_trunk, tree_leaf, 0.9 + float(i % 3) * 0.12)
+        _add_environment_tree(Vector3(17.0 + float(i % 3), 0.0, z - 3.5), tree_trunk, tree_leaf, 1.0 + float((i + 1) % 3) * 0.1)
+    for i in range(6):
+        var z := 4.0 - float(i) * 10.5
+        _add_roadside_sign(Vector3(-7.0, 1.5, z), 0.0, sign_material)
+    for i in range(5):
+        var z := -3.0 - float(i) * 12.0
+        _add_rock(Vector3(-14.0 - float(i % 2) * 2.0, 1.2, z), rock, 1.0 + float(i % 3) * 0.35)
+        _add_rock(Vector3(20.0 + float(i % 2) * 2.0, 1.0, z - 4.0), rock, 0.8 + float((i + 1) % 3) * 0.3)
+    _add_environment_banner(Vector3(0.0, 4.8, 2.0), "RACE ZONE")
+
+func _add_environment_tree(position: Vector3, trunk_material: StandardMaterial3D, leaf_material: StandardMaterial3D, scale_value: float) -> void:
+    var root := Node3D.new()
+    root.position = position
+    root.scale = Vector3.ONE * scale_value
+    add_child(root)
+    var trunk := MeshInstance3D.new()
+    var trunk_mesh := CylinderMesh.new()
+    trunk_mesh.top_radius = 0.14
+    trunk_mesh.bottom_radius = 0.25
+    trunk_mesh.height = 2.8
+    trunk.mesh = trunk_mesh
+    trunk.position.y = 1.4
+    trunk.material_override = trunk_material
+    root.add_child(trunk)
+    for offset in [Vector3(0.0, 2.9, 0.0), Vector3(0.0, 3.6, 0.2)]:
+        var crown := MeshInstance3D.new()
+        var crown_mesh := SphereMesh.new()
+        crown_mesh.radius = 1.25
+        crown_mesh.height = 2.4
+        crown.mesh = crown_mesh
+        crown.position = offset
+        crown.material_override = leaf_material
+        root.add_child(crown)
+
+func _add_rock(position: Vector3, material: StandardMaterial3D, scale_value: float) -> void:
+    var rock := MeshInstance3D.new()
+    var mesh := SphereMesh.new()
+    mesh.radius = 1.5
+    mesh.height = 1.8
+    rock.mesh = mesh
+    rock.position = position
+    rock.scale = Vector3(scale_value * 1.4, scale_value, scale_value)
+    rock.rotation_degrees = Vector3(0.0, float(int(position.z * 7.0) % 35), 8.0)
+    rock.material_override = material
+    add_child(rock)
+
+func _add_roadside_sign(position: Vector3, rotation_y: float, material: StandardMaterial3D) -> void:
+    var root := Node3D.new()
+    root.position = position
+    root.rotation_degrees.y = rotation_y
+    add_child(root)
+    var pole := MeshInstance3D.new()
+    var pole_mesh := CylinderMesh.new()
+    pole_mesh.top_radius = 0.06
+    pole_mesh.bottom_radius = 0.09
+    pole_mesh.height = 2.6
+    pole.mesh = pole_mesh
+    pole.position.y = 1.3
+    pole.material_override = _make_material(Color(0.12, 0.13, 0.14), 0.5, 0.45)
+    root.add_child(pole)
+    var board := MeshInstance3D.new()
+    var board_mesh := BoxMesh.new()
+    board_mesh.size = Vector3(1.8, 0.8, 0.1)
+    board.mesh = board_mesh
+    board.position.y = 2.7
+    board.material_override = material
+    root.add_child(board)
+
+func _add_environment_banner(position: Vector3, text_value: String) -> void:
+    var banner := MeshInstance3D.new()
+    var mesh := BoxMesh.new()
+    mesh.size = Vector3(9.0, 1.0, 0.25)
+    banner.mesh = mesh
+    banner.position = position
+    banner.material_override = _make_emission_material(Color(0.06, 0.08, 0.12), 0.15)
+    add_child(banner)
 
 func _build_environment_scenery() -> void:
     var grass := _make_material(Color(0.07, 0.22, 0.09), 0.0, 0.95)
