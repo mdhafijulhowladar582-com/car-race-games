@@ -69,6 +69,7 @@ func _build_road() -> void:
     _add_guardrail(Vector3(-6.35, 0.1, -20.0), 0.0, 14.0)
     _add_guardrail(Vector3(10.7, 0.65, -40.0), -18.0, 12.0)
     _add_guardrail(Vector3(15.0, 0.85, -53.0), -10.0, 9.0)
+    _add_tunnel(Vector3(9.0, 0.48, -53.0), -10.0, 10.0)
 
     _add_barrier(Vector3(-4.0, 0.65, -5.0), 0.0)
     _add_barrier(Vector3(3.5, 0.62, -30.0), -8.0)
@@ -209,6 +210,40 @@ func _add_ramp(position: Vector3, rotation_y: float) -> void:
     stripe_material.emission = Color(0.8, 0.35, 0.02)
     stripe.material_override = stripe_material
     ramp.add_child(stripe)
+
+func _add_tunnel(position: Vector3, rotation_y: float, length: float) -> void:
+    var tunnel := Node3D.new()
+    tunnel.position = position
+    tunnel.rotation_degrees.y = rotation_y
+    add_child(tunnel)
+
+    var concrete := _make_material(Color(0.18, 0.2, 0.23), 0.2, 0.82)
+
+    var roof := MeshInstance3D.new()
+    var roof_mesh := BoxMesh.new()
+    roof_mesh.size = Vector3(12.8, 0.45, length)
+    roof.mesh = roof_mesh
+    roof.position = Vector3(0.0, 4.4, 0.0)
+    roof.material_override = concrete
+    tunnel.add_child(roof)
+
+    for side in [-1.0, 1.0]:
+        var wall := MeshInstance3D.new()
+        var wall_mesh := BoxMesh.new()
+        wall_mesh.size = Vector3(0.45, 4.4, length)
+        wall.mesh = wall_mesh
+        wall.position = Vector3(side * 6.15, 2.2, 0.0)
+        wall.material_override = concrete
+        tunnel.add_child(wall)
+
+    for side in [-1.0, 1.0]:
+        for z in [-length * 0.5, length * 0.5]:
+            var light := OmniLight3D.new()
+            light.position = Vector3(side * 4.6, 3.5, z)
+            light.omni_range = 7.0
+            light.light_energy = 1.3
+            light.light_color = Color(0.8, 0.88, 1.0)
+            tunnel.add_child(light)
 
 func _add_barrier(position: Vector3, rotation_y: float) -> void:
     var obstacle := StaticBody3D.new()
