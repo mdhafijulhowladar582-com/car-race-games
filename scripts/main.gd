@@ -10,6 +10,7 @@ var race_label: Label
 var race_bar: ProgressBar
 var finish_overlay: ColorRect
 var finish_button: Button
+var ambience_player: AudioStreamPlayer3D
 var race_finished := false
 var race_start_z := 15.0
 var finish_z := -66.0
@@ -20,6 +21,7 @@ func _ready() -> void:
     _build_road()
     _build_environment_scenery()
     _build_scenery()
+    _build_ambience_audio()
     _build_mobile_controls()
     _build_health_hud()
     _build_race_system()
@@ -30,6 +32,42 @@ func _ready() -> void:
         car.health_changed.connect(_on_health_changed)
         car.game_over.connect(_on_game_over)
         _on_health_changed(car.health, car.max_health)
+
+func _build_ambience_audio() -> void:
+    ambience_player = AudioStreamPlayer3D.new()
+    ambience_player.name = "TrackAmbience"
+    var stream := _create_ambience()
+    ambience_player.stream = stream
+    ambience_player.volume_db = -24.0
+    ambience_player.max_distance = 80.0
+    add_child(ambience_player)
+    ambience_player.play()
+
+func _create_ambience() -> AudioStreamWAV:
+    var sample_rate := 22050
+    var duration := 1.8
+    var samples := int(sample_rate * duration)
+    var data := PackedByteArray()
+    data.resize(samples * 2)
+    var rng := RandomNumberGenerator.new()
+    rng.seed = 19427
+
+    for i in samples:
+        var t := float(i) / sample_rate
+        var low := sin(TAU * 95.0 * t) * 0.06
+        var mid := sin(TAU * 260.0 * t) * 0.025
+        var noise := rng.randf_range(-1.0, 1.0) * 0.018
+        data.encode_s16(i * 2, int(clamp(low + mid + noise, -1.0, 1.0) * 8000.0))
+
+    var stream := AudioStreamWAV.new()
+    stream.format = AudioStreamWAV.FORMAT_16_BITS
+    stream.mix_rate = sample_rate
+    stream.stereo = false
+    stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+    stream.loop_begin = 0
+    stream.loop_end = samples
+    stream.data = data
+    return stream
 
 func _build_environment() -> void:
     var world := WorldEnvironment.new()
