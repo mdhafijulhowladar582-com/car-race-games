@@ -21,6 +21,11 @@ extends CharacterBody3D
 @export_category("Stability")
 @export var gravity := 22.0
 @export var ground_stick := 0.2
+@export var tire_grip := 8.5
+@export var traction_control := 0.82
+@export var aerodynamic_drag := 0.0028
+@export var downforce := 0.012
+@export var steering_speed_loss := 0.18
 
 var speed := 0.0
 var steering := 0.0
@@ -256,18 +261,24 @@ func set_finish_cinematic(enabled: bool) -> void:
     camera_cinematic = enabled
 
 func _update_speed(throttle: float, delta: float) -> void:
+    var speed_ratio := clamp(abs(speed) / max_speed, 0.0, 1.0)
+    var drag_force := aerodynamic_drag * speed * abs(speed)
     if throttle > 0.0:
-        speed = move_toward(speed, max_speed, acceleration * throttle * delta)
+        var high_speed_factor := lerp(1.0, 0.38, speed_ratio)
+        speed = move_toward(speed, max_speed, acceleration * throttle * high_speed_factor * delta)
+        speed = move_toward(speed, speed - drag_force, delta * 0.35)
     elif throttle < 0.0:
         if speed > 0.5:
             speed = move_toward(speed, 0.0, braking * -throttle * delta)
         else:
             speed = move_toward(speed, -reverse_speed, acceleration * 0.55 * -throttle * delta)
     else:
-        speed = move_toward(speed, 0.0, rolling_resistance * delta)
+        speed = move_toward(speed, 0.0, (rolling_resistance + abs(drag_force) * 0.8) * delta)
 
 func _update_steering(steer_input: float, delta: float) -> void:
-    var target_steering := steer_input * steering_sensitivity
+    var speed_ratio := clamp(abs(speed) / max_speed, 0.0, 1.0)
+    var steering_limit := lerp(1.0, 1.0 - steering_speed_loss, speed_ratio)
+    var target_steering := steer_input * steering_sensitivity * steering_limit
     steering = move_toward(steering, target_steering, steering_response * delta)
 
 func _apply_movement(delta: float) -> void:
@@ -276,11 +287,28 @@ func _apply_movement(delta: float) -> void:
 
     if abs(speed) > 0.1:
         var direction := 1.0 if speed >= 0.0 else -1.0
-        rotation.y -= direction * turn_strength * deg_to_rad(max_steering_angle) * delta
+        var steering_curve := lerp(1.0, 0.72, speed_ratio)
+        rotation.y -= direction * turn_strength * steering_curve * deg_to_rad(max_steering_angle) * delta
 
     var forward := -global_transform.basis.z
-    velocity.x = forward.x * speed
-    velocity.z = forward.z * speed
+    var right := global_transform.basis.x
+    var horizontal_velocity := Vector3(velocity.x, 0.0, velocity.z)
+    var forward_velocity := forward * speed
+    var lateral_speed := horizontal_velocity.dot(right)
+    var grip_strength := tire_grip * (1.0 + speed_ratio * 0.55)
+    var lateral_velocity := right * lateral_speed
+    var lateral_target := Vector3.ZERO
+    var grip_factor := clamp(grip_strength * delta * traction_control, 0.0, 1.0)
+    lateral_velocity = lateral_velocity.lerp(lateral_target, grip_factor)
+    var target_horizontal := forward_velocity + lateral_velocity
+    velocity.x = target_horizontal.x
+    velocity.z = target_horizontal.z
+    velocity.y -= downforce * speed_ratio * delta
+
+    if not is_on_floor():
+        velocity.y -= gravity * delta
+    else:
+        velocity.y = -ground_stick
 
     if not is_on_floor():
         velocity.y -= gravity * delta
