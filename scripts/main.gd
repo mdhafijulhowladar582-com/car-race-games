@@ -848,17 +848,39 @@ func _show_leaderboard() -> void:
     _refresh_leaderboard()
 
 func _refresh_leaderboard() -> void:
+    if leaderboard_label == null:
+        return
+
     if leaderboard_entries.is_empty():
         leaderboard_label.text = "LEADERBOARD\n\nNo local records yet."
     else:
+        var sorted_entries: Array = leaderboard_entries.duplicate()
+        sorted_entries.sort_custom(func(a, b) -> bool:
+            return _leaderboard_time_value(a) < _leaderboard_time_value(b)
+        )
+
         var text_lines := ["LEADERBOARD", ""]
-        for i in range(mini(leaderboard_entries.size(), 10)):
-            var entry = leaderboard_entries[i]
+        for i in range(mini(sorted_entries.size(), 10)):
+            var entry = sorted_entries[i]
             text_lines.append("%02d. %s — %s" % [i + 1, str(entry.get("name", "PLAYER")), str(entry.get("time", "--"))])
         leaderboard_label.text = "\n".join(text_lines)
 
     if online_leaderboard_url.is_empty():
         online_leaderboard_status = "OFFLINE"
+
+func _leaderboard_time_value(entry: Variant) -> float:
+    if not (entry is Dictionary):
+        return INF
+    var raw_time = entry.get("time", INF)
+    if raw_time is float or raw_time is int:
+        return float(raw_time)
+
+    var time_text := str(raw_time).strip_edges()
+    if ":" in time_text:
+        var parts := time_text.split(":")
+        if parts.size() == 2:
+            return float(parts[0]) * 60.0 + float(parts[1])
+    return float(time_text) if time_text.is_valid_float() else INF
 
 func _on_leaderboard_request_completed(_result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
     if response_code < 200 or response_code >= 300:
