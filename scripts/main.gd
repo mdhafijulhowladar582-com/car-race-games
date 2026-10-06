@@ -28,8 +28,8 @@ var upgrade_level := 0
 var garage_overlay: ColorRect
 var garage_info_label: Label
 var ai_opponents: Array[Node3D] = []
-var ai_count := 3
-var ai_skill_profiles := [0.94, 1.0, 1.06]
+var ai_count := 1
+var ai_skill_profiles := [1.0]
 var ai_racing_offsets := [-3.2, -1.6, 1.6]
 var ai_race_progress: Array[float] = []
 var ai_last_positions: Array[int] = []
