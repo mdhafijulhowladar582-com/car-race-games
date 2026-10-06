@@ -84,6 +84,8 @@ var online_leaderboard_url := ""
 var leaderboard_http: HTTPRequest
 var online_leaderboard_status := "OFFLINE"
 var firebase_service: Node
+var firebase_auth_status := "GUEST"
+var firebase_display_name := ""
 var career_level := 1
 var career_wins := 0
 var career_races := 0
@@ -944,6 +946,8 @@ func _setup_firebase_service() -> void:
     add_child(firebase_service)
     firebase_service.leaderboard_loaded.connect(_on_firebase_leaderboard_loaded)
     firebase_service.leaderboard_failed.connect(_on_firebase_leaderboard_failed)
+    firebase_service.auth_changed.connect(_on_firebase_auth_changed)
+    firebase_service.auth_failed.connect(_on_firebase_auth_failed)
     online_leaderboard_status = "CONNECTING"
     firebase_service.load_public_leaderboard()
 
@@ -1009,6 +1013,17 @@ func _leaderboard_time_value(entry: Variant) -> float:
         if parts.size() == 2:
             return float(parts[0]) * 60.0 + float(parts[1])
     return float(time_text) if time_text.is_valid_float() else INF
+
+func _on_firebase_auth_changed(authenticated: bool, name: String) -> void:
+    if authenticated:
+        firebase_auth_status = "SIGNED_IN"
+        firebase_display_name = name
+    else:
+        firebase_auth_status = "GUEST"
+        firebase_display_name = ""
+
+func _on_firebase_auth_failed(message: String) -> void:
+    firebase_auth_status = "AUTH_ERROR"
 
 func _on_firebase_leaderboard_loaded(entries: Array) -> void:
     leaderboard_entries = entries
