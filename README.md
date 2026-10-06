@@ -59,6 +59,16 @@ Godot 4.x 3D car racing game for Android and PC.
 - Collision barriers and barrel obstacles
 - Physical collision on road and track obstacles
 
+## Environment
+
+- Large roadside grass/terrain area
+- Mountain range backdrop
+- Repeating roadside trees
+- City building blocks with illuminated windows
+- Roadside lamp posts with working lights
+- Track direction/sign boards
+- Lightweight procedural scenery with no external asset dependencies
+
 ## Car Visual
 
 - Detailed procedural sports-car body
