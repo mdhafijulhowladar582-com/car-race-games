@@ -63,6 +63,11 @@ var coins_label: Label
 var speed_label: Label
 var speed_bar: ProgressBar
 var mini_progress: ProgressBar
+var minimap_canvas: CanvasLayer
+var minimap_route: Line2D
+var minimap_player_marker: ColorRect
+var minimap_ai_markers: Array[ColorRect] = []
+var minimap_root: Control
 var settings_overlay: ColorRect
 var settings_label: Label
 var graphics_quality := "MEDIUM"
@@ -158,6 +163,7 @@ func _ready() -> void:
     _build_mobile_controls()
     _build_health_hud()
     _build_race_system()
+    _build_minimap()
     _build_ai_opponents()
     _build_game_over_ui()
     _build_mode_select()
@@ -183,6 +189,7 @@ func _ready() -> void:
         _on_health_changed(car.health, car.max_health)
 
 func _physics_process(delta: float) -> void:
+    _update_minimap()
     var car := get_node_or_null("PlayerCar")
     if not car or race_finished:
         return
@@ -385,6 +392,115 @@ func _build_race_system() -> void:
     race_bar.size = Vector2(420.0, 18.0)
     add_child(race_bar)
 
+func _build_minimap() -> void:
+    minimap_canvas = CanvasLayer.new()
+    minimap_canvas.layer = 20
+    add_child(minimap_canvas)
+
+    var panel := ColorRect.new()
+    panel.name = "MinimapPanel"
+    panel.position = Vector2(965.0, 70.0)
+    panel.size = Vector2(285.0, 190.0)
+    panel.color = Color(0.015, 0.02, 0.035, 0.88)
+    minimap_canvas.add_child(panel)
+
+    var title := Label.new()
+    title.text = "MINIMAP"
+    title.position = Vector2(12.0, 8.0)
+    title.add_theme_font_size_override("font_size", 18)
+    panel.add_child(title)
+
+    minimap_root = Control.new()
+    minimap_root.position = Vector2(12.0, 36.0)
+    minimap_root.size = Vector2(261.0, 142.0)
+    panel.add_child(minimap_root)
+
+    minimap_route = Line2D.new()
+    minimap_route.width = 4.0
+    minimap_route.closed = false
+    minimap_root.add_child(minimap_route)
+
+    minimap_player_marker = ColorRect.new()
+    minimap_player_marker.size = Vector2(10.0, 10.0)
+    minimap_player_marker.color = Color(1.0, 0.82, 0.08, 1.0)
+    minimap_root.add_child(minimap_player_marker)
+
+    _update_minimap_route()
+
+func _update_minimap_route() -> void:
+    if not minimap_route or track_path.is_empty():
+        return
+
+    var min_x := INF
+    var max_x := -INF
+    var min_z := INF
+    var max_z := -INF
+    for point in track_path:
+        min_x = minf(min_x, point.x)
+        max_x = maxf(max_x, point.x)
+        min_z = minf(min_z, point.z)
+        max_z = maxf(max_z, point.z)
+
+    var width := maxf(max_x - min_x, 1.0)
+    var depth := maxf(max_z - min_z, 1.0)
+    var points := PackedVector2Array()
+    var margin := 8.0
+    var draw_size := minimap_root.size - Vector2.ONE * margin * 2.0
+
+    for point in track_path:
+        var x := ((point.x - min_x) / width) * draw_size.x + margin
+        var y := ((max_z - point.z) / depth) * draw_size.y + margin
+        points.append(Vector2(x, y))
+
+    minimap_route.points = points
+
+    for marker in minimap_ai_markers:
+        if is_instance_valid(marker):
+            marker.queue_free()
+    minimap_ai_markers.clear()
+
+    for i in range(ai_opponents.size()):
+        var marker := ColorRect.new()
+        marker.size = Vector2(8.0, 8.0)
+        marker.color = Color(0.25, 0.55, 1.0, 1.0)
+        minimap_root.add_child(marker)
+        minimap_ai_markers.append(marker)
+
+    _update_minimap()
+
+func _update_minimap() -> void:
+    if not minimap_root or track_path.is_empty():
+        return
+
+    var min_x := INF
+    var max_x := -INF
+    var min_z := INF
+    var max_z := -INF
+    for point in track_path:
+        min_x = minf(min_x, point.x)
+        max_x = maxf(max_x, point.x)
+        min_z = minf(min_z, point.z)
+        max_z = maxf(max_z, point.z)
+
+    var width := maxf(max_x - min_x, 1.0)
+    var depth := maxf(max_z - min_z, 1.0)
+    var margin := 8.0
+    var draw_size := minimap_root.size - Vector2.ONE * margin * 2.0
+
+    var car := get_node_or_null("PlayerCar")
+    if car and minimap_player_marker:
+        var px := ((car.global_position.x - min_x) / width) * draw_size.x + margin
+        var py := ((max_z - car.global_position.z) / depth) * draw_size.y + margin
+        minimap_player_marker.position = Vector2(px - 5.0, py - 5.0)
+
+    for i in range(mini(ai_opponents.size(), minimap_ai_markers.size())):
+        var ai := ai_opponents[i]
+        if not is_instance_valid(ai):
+            continue
+        var ax := ((ai.global_position.x - min_x) / width) * draw_size.x + margin
+        var ay := ((max_z - ai.global_position.z) / depth) * draw_size.y + margin
+        minimap_ai_markers[i].position = Vector2(ax - 4.0, ay - 4.0)
+
 func _build_ai_opponents() -> void:
     if track_path.is_empty():
         return
@@ -486,6 +602,7 @@ func _rebuild_map() -> void:
     _build_professional_track()
     _build_map_environment()
     _sync_race_start_to_map()
+    _update_minimap_route()
 
 func _build_map_environment() -> void:
     var environment_root := Node3D.new()
