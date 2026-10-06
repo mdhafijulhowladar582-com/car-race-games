@@ -69,6 +69,7 @@ var leaderboard_entries: Array = []
 
 var race_start_z := 15.0
 var finish_z := -66.0
+var track_path: Array[Vector3] = []
 
 
 func _ready() -> void:
@@ -76,6 +77,7 @@ func _ready() -> void:
     _load_settings()
     _build_environment()
     _build_road()
+    _build_professional_track()
     _build_environment_scenery()
     _build_scenery()
     _build_ambience_audio()
@@ -323,6 +325,57 @@ func _add_sign(position: Vector3, rotation_y: float, text_value: String) -> void
     board.position.y = 2.35
     board.material_override = material
     sign_root.add_child(board)
+
+func _build_professional_track() -> void:
+    track_path = [
+        Vector3(0.0, 0.0, 15.0),
+        Vector3(-1.0, 0.0, 5.0),
+        Vector3(0.0, 0.0, -5.0),
+        Vector3(2.0, 0.1, -15.0),
+        Vector3(5.0, 0.25, -25.0),
+        Vector3(8.0, 0.45, -35.0),
+        Vector3(10.0, 0.65, -45.0),
+        Vector3(11.0, 0.8, -55.0),
+        Vector3(10.0, 0.8, -66.0)
+    ]
+    var edge_material := _make_material(Color(0.12, 0.14, 0.17), 0.45, 0.5)
+    for i in range(track_path.size() - 1):
+        var a := track_path[i]
+        var b := track_path[i + 1]
+        var midpoint := (a + b) * 0.5
+        var direction := b - a
+        var length := direction.length()
+        var section := MeshInstance3D.new()
+        var mesh := BoxMesh.new()
+        mesh.size = Vector3(0.12, 0.16, length)
+        section.mesh = mesh
+        section.position = midpoint + Vector3(0.0, 0.18, 0.0)
+        section.rotation.y = atan2(direction.x, direction.z)
+        section.material_override = edge_material
+        add_child(section)
+
+        var marker := MeshInstance3D.new()
+        var marker_mesh := BoxMesh.new()
+        marker_mesh.size = Vector3(0.22, 0.035, 1.8)
+        marker.mesh = marker_mesh
+        marker.position = midpoint + Vector3(0.0, 0.18, 0.0)
+        marker.rotation.y = atan2(direction.x, direction.z)
+        marker.material_override = _make_emission_material(Color(0.95, 0.85, 0.25), 0.35)
+        add_child(marker)
+
+    _add_curve_apex_marker(Vector3(2.0, 0.25, -25.0))
+    _add_curve_apex_marker(Vector3(8.0, 0.5, -42.0))
+
+func _add_curve_apex_marker(position: Vector3) -> void:
+    var marker := MeshInstance3D.new()
+    var mesh := CylinderMesh.new()
+    mesh.top_radius = 0.16
+    mesh.bottom_radius = 0.16
+    mesh.height = 0.8
+    marker.mesh = mesh
+    marker.position = position + Vector3(0.0, 0.45, 0.0)
+    marker.material_override = _make_emission_material(Color(1.0, 0.28, 0.05), 0.7)
+    add_child(marker)
 
 func _build_road() -> void:
     var road_material := _make_material(Color(0.075, 0.08, 0.095), 0.0, 0.9)
