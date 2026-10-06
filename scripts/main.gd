@@ -36,6 +36,7 @@ var ai_last_positions: Array[int] = []
 var player_race_position := 1
 var ai_lap_progress: Array[int] = []
 var ambience_player: AudioStreamPlayer3D
+var music_player: AudioStreamPlayer
 var race_finished := false
 var race_started := false
 var race_elapsed := 0.0
@@ -104,6 +105,7 @@ func _ready() -> void:
     _build_high_quality_environment()
     _build_scenery()
     _build_ambience_audio()
+    _build_music_system()
     _build_mobile_controls()
     _build_health_hud()
     _build_race_system()
@@ -163,6 +165,43 @@ func _create_ambience() -> AudioStreamWAV:
     stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
     stream.loop_begin = 0
     stream.loop_end = samples
+    stream.data = data
+    return stream
+
+func _build_music_system() -> void:
+    music_player = AudioStreamPlayer.new()
+    music_player.name = "RaceMusic"
+    music_player.stream = _create_race_music()
+    music_player.volume_db = -16.0
+    music_player.bus = "Master"
+    add_child(music_player)
+    music_player.play()
+
+func _create_race_music() -> AudioStreamWAV:
+    var sample_rate := 22050
+    var beat := 0.32
+    var note_count := 32
+    var samples_per_note := int(sample_rate * beat)
+    var data := PackedByteArray()
+    data.resize(samples_per_note * note_count * 2)
+    var melody := [220.0, 261.63, 329.63, 392.0, 329.63, 261.63, 293.66, 349.23, 440.0, 349.23, 293.66, 261.63, 220.0, 293.66, 329.63, 392.0]
+    for i in range(note_count):
+        var frequency: float = melody[i % melody.size()]
+        for sample in range(samples_per_note):
+            var index := i * samples_per_note + sample
+            var t := float(sample) / sample_rate
+            var envelope := minf(1.0, t * 18.0) * minf(1.0, (beat - t) * 12.0)
+            var tone := sin(TAU * frequency * t) * 0.11
+            tone += sin(TAU * frequency * 2.0 * t) * 0.035
+            tone += sin(TAU * frequency * 0.5 * t) * 0.025
+            data.encode_s16(index * 2, int(clamp(tone * envelope, -1.0, 1.0) * 32767.0))
+    var stream := AudioStreamWAV.new()
+    stream.format = AudioStreamWAV.FORMAT_16_BITS
+    stream.mix_rate = sample_rate
+    stream.stereo = false
+    stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+    stream.loop_begin = 0
+    stream.loop_end = samples_per_note * note_count
     stream.data = data
     return stream
 
