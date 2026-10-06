@@ -84,6 +84,7 @@ var career_races := 0
 var career_stars := 0
 var career_reward_multiplier := 1.0
 var achievements_overlay: ColorRect
+var loading_overlay: ColorRect
 
 var race_start_z := 15.0
 var finish_z := -66.0
@@ -1564,7 +1565,7 @@ func _build_mode_select() -> void:
     canvas.add_child(mode_overlay)
 
     var title := Label.new()
-    title.text = "🏆 SELECT GAME MODE"
+    title.text = "🏎️ CAR RACE GAMES"
     title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     title.set_anchors_preset(Control.PRESET_CENTER)
     title.position = Vector2(-360.0, -250.0)
@@ -1573,7 +1574,7 @@ func _build_mode_select() -> void:
     mode_overlay.add_child(title)
 
     mode_label = Label.new()
-    mode_label.text = "QUICK RACE\nRace against 3 AI opponents"
+    mode_label.text = "SELECT RACE MODE\nRace against AI opponents"
     mode_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     mode_label.set_anchors_preset(Control.PRESET_CENTER)
     mode_label.position = Vector2(-360.0, -150.0)
@@ -1623,6 +1624,7 @@ func _select_mode(mode_value: String) -> void:
 func _start_selected_mode() -> void:
     if is_instance_valid(mode_overlay):
         mode_overlay.queue_free()
+    _show_loading_screen()
     if selected_mode == "time_trial":
         for ai in ai_opponents:
             if is_instance_valid(ai):
@@ -1639,7 +1641,59 @@ func _start_selected_mode() -> void:
         car.configure_car(selected_car)
         if car.has_method("customize_car"):
             car.customize_car(selected_color, selected_wheels, upgrade_level)
-    _start_race_countdown()
+    get_tree().create_timer(0.7).timeout.connect(_finish_loading_screen)
+
+func _finish_loading_screen() -> void:
+    if is_instance_valid(loading_overlay):
+        var tween := create_tween()
+        tween.tween_property(loading_overlay, "modulate:a", 0.0, 0.35)
+        tween.finished.connect(func():
+            if is_instance_valid(loading_overlay):
+                loading_overlay.queue_free()
+                loading_overlay = null
+            _start_race_countdown()
+        )
+
+func _show_loading_screen() -> void:
+    var canvas := CanvasLayer.new()
+    canvas.name = "LoadingUI"
+    canvas.layer = 60
+    add_child(canvas)
+    loading_overlay = ColorRect.new()
+    loading_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    loading_overlay.color = Color(0.008, 0.012, 0.02, 1.0)
+    canvas.add_child(loading_overlay)
+    var title := Label.new()
+    title.text = "CAR RACE GAMES"
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title.position = Vector2(0.0, 180.0)
+    title.size = Vector2(1280.0, 70.0)
+    title.add_theme_font_size_override("font_size", 44)
+    loading_overlay.add_child(title)
+    var info := Label.new()
+    info.text = "LOADING %s  •  %s  •  %s" % [selected_map, selected_weather, mode_name]
+    info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    info.position = Vector2(0.0, 290.0)
+    info.size = Vector2(1280.0, 50.0)
+    info.add_theme_font_size_override("font_size", 22)
+    loading_overlay.add_child(info)
+    var bar := ProgressBar.new()
+    bar.position = Vector2(290.0, 380.0)
+    bar.size = Vector2(700.0, 28.0)
+    bar.min_value = 0.0
+    bar.max_value = 1.0
+    bar.value = 0.0
+    bar.show_percentage = false
+    loading_overlay.add_child(bar)
+    var tween := create_tween()
+    tween.tween_property(bar, "value", 1.0, 0.65)
+    var status := Label.new()
+    status.text = "PREPARING RACE..." 
+    status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    status.position = Vector2(0.0, 440.0)
+    status.size = Vector2(1280.0, 40.0)
+    status.add_theme_font_size_override("font_size", 20)
+    loading_overlay.add_child(status)
 
 func _start_race_countdown() -> void:
     countdown_label = Label.new()
