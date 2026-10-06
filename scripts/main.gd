@@ -1144,13 +1144,18 @@ func _on_firebase_auth_changed(authenticated: bool, name: String) -> void:
     if authenticated:
         firebase_auth_status = "SIGNED_IN"
         firebase_display_name = name
+        online_leaderboard_status = "CONNECTING"
+        if firebase_service:
+            firebase_service.load_public_leaderboard()
     else:
         firebase_auth_status = "GUEST"
         firebase_display_name = ""
     _update_auth_ui()
 
 func _on_firebase_score_saved() -> void:
-    online_leaderboard_status = "ONLINE"
+    online_leaderboard_status = "CONNECTING"
+    if firebase_service:
+        firebase_service.load_public_leaderboard()
     if leaderboard_label and is_instance_valid(leaderboard_label):
         _refresh_leaderboard()
 
