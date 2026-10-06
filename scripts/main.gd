@@ -42,6 +42,8 @@ var total_laps := 1
 var coins := 0
 var xp := 0
 var selected_weather := "DAY"
+var selected_map := "CITY"
+var map_label: Label
 var weather_overlay: ColorRect
 var rain_particles: GPUParticles3D
 var fog_environment: Environment
@@ -67,9 +69,12 @@ func _ready() -> void:
     _build_game_over_ui()
     _build_mode_select()
     _apply_weather(selected_weather)
+    _apply_map(selected_map)
     _build_rewards_hud()
     _build_professional_mobile_hud()
     _build_weather_select()
+    _build_map_select()
+    _update_map_label()
 
     var car := get_node_or_null("PlayerCar")
     if car:
@@ -807,6 +812,55 @@ func _select_car(car_name: String) -> void:
         car_label.text = "CAR: GT\nSpeed 38 | Acceleration 16 | Handling 2.4"
     else:
         car_label.text = "CAR: SPORTS\nSpeed 34 | Acceleration 18 | Handling 2.2"
+
+func _build_map_select() -> void:
+    var panel := Panel.new()
+    panel.position = Vector2(780.0, 300.0)
+    panel.size = Vector2(320.0, 220.0)
+    panel.z_index = 5
+    mode_overlay.add_child(panel)
+
+    var title := Label.new()
+    title.text = "MAP"
+    title.position = Vector2(20.0, 12.0)
+    title.size = Vector2(280.0, 35.0)
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title.add_theme_font_size_override("font_size", 22)
+    panel.add_child(title)
+
+    _add_map_button(panel, "CITY", Vector2(20.0, 55.0), "CITY")
+    _add_map_button(panel, "HIGHWAY", Vector2(20.0, 110.0), "HIGHWAY")
+    _add_map_button(panel, "DESERT", Vector2(20.0, 165.0), "DESERT")
+
+func _add_map_button(parent: Control, text_value: String, button_position: Vector2, map_value: String) -> void:
+    var button := Button.new()
+    button.text = text_value
+    button.position = button_position
+    button.size = Vector2(280.0, 45.0)
+    button.focus_mode = Control.FOCUS_NONE
+    button.pressed.connect(_select_map.bind(map_value))
+    parent.add_child(button)
+
+func _select_map(map_value: String) -> void:
+    selected_map = map_value
+    _apply_map(selected_map)
+
+func _apply_map(map_value: String) -> void:
+    var world := get_node_or_null("WorldEnvironment") as WorldEnvironment
+    if not world:
+        return
+    var environment := world.environment
+    if map_value == "HIGHWAY":
+        environment.background_color = Color(0.18, 0.2, 0.24)
+    elif map_value == "DESERT":
+        environment.background_color = Color(0.32, 0.22, 0.12)
+    else:
+        environment.background_color = Color(0.08, 0.1, 0.14)
+    _update_map_label()
+
+func _update_map_label() -> void:
+    if is_instance_valid(map_label):
+        map_label.text = "MAP: " + selected_map
 
 func _build_weather_select() -> void:
     var panel := Panel.new()
