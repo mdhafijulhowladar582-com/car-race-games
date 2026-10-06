@@ -326,11 +326,6 @@ func _apply_movement(delta: float) -> void:
     else:
         velocity.y = -ground_stick
 
-    if not is_on_floor():
-        velocity.y -= gravity * delta
-    else:
-        velocity.y = -ground_stick
-
     move_and_slide()
 
     if not is_game_over:
