@@ -43,6 +43,9 @@ var coins := 0
 var xp := 0
 var reward_label: Label
 var coins_label: Label
+var speed_label: Label
+var speed_bar: ProgressBar
+var mini_progress: ProgressBar
 var race_start_z := 15.0
 var finish_z := -66.0
 
@@ -60,6 +63,7 @@ func _ready() -> void:
     _build_game_over_ui()
     _build_mode_select()
     _build_rewards_hud()
+    _build_professional_mobile_hud()
 
     var car := get_node_or_null("PlayerCar")
     if car:
@@ -1191,6 +1195,7 @@ func _process(delta: float) -> void:
 
     if race_started:
         race_elapsed += delta
+    _update_professional_mobile_hud()
     if is_instance_valid(timer_label):
         timer_label.text = "TIME " + _format_race_time(race_elapsed)
     if is_instance_valid(position_label):
@@ -1294,6 +1299,80 @@ func _show_finish_overlay() -> void:
     finish_button.add_theme_font_size_override("font_size", 28)
     finish_button.pressed.connect(_restart_game)
     finish_overlay.add_child(finish_button)
+
+func _build_professional_mobile_hud() -> void:
+    var canvas := CanvasLayer.new()
+    canvas.name = "ProfessionalMobileHUD"
+    canvas.layer = 9
+    add_child(canvas)
+
+    var speed_panel := Panel.new()
+    speed_panel.position = Vector2(500.0, 575.0)
+    speed_panel.size = Vector2(280.0, 125.0)
+    var panel_style := StyleBoxFlat.new()
+    panel_style.bg_color = Color(0.015, 0.02, 0.03, 0.82)
+    panel_style.corner_radius_top_left = 22
+    panel_style.corner_radius_top_right = 22
+    panel_style.corner_radius_bottom_left = 22
+    panel_style.corner_radius_bottom_right = 22
+    panel_style.border_width_left = 2
+    panel_style.border_width_top = 2
+    panel_style.border_width_right = 2
+    panel_style.border_width_bottom = 2
+    panel_style.border_color = Color(1.0, 1.0, 1.0, 0.22)
+    speed_panel.add_theme_stylebox_override("panel", panel_style)
+    canvas.add_child(speed_panel)
+
+    speed_label = Label.new()
+    speed_label.text = "0 KM/H"
+    speed_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    speed_label.position = Vector2(10.0, 8.0)
+    speed_label.size = Vector2(260.0, 48.0)
+    speed_label.add_theme_font_size_override("font_size", 34)
+    speed_panel.add_child(speed_label)
+
+    speed_bar = ProgressBar.new()
+    speed_bar.position = Vector2(20.0, 68.0)
+    speed_bar.size = Vector2(240.0, 18.0)
+    speed_bar.min_value = 0.0
+    speed_bar.max_value = 100.0
+    speed_bar.show_percentage = false
+    speed_panel.add_child(speed_bar)
+
+    var mini_panel := Panel.new()
+    mini_panel.position = Vector2(1100.0, 35.0)
+    mini_panel.size = Vector2(145.0, 220.0)
+    mini_panel.add_theme_stylebox_override("panel", panel_style)
+    canvas.add_child(mini_panel)
+
+    var mini_title := Label.new()
+    mini_title.text = "TRACK"
+    mini_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    mini_title.position = Vector2(5.0, 8.0)
+    mini_title.size = Vector2(135.0, 30.0)
+    mini_title.add_theme_font_size_override("font_size", 17)
+    mini_panel.add_child(mini_title)
+
+    mini_progress = ProgressBar.new()
+    mini_progress.position = Vector2(53.0, 48.0)
+    mini_progress.size = Vector2(38.0, 150.0)
+    mini_progress.min_value = 0.0
+    mini_progress.max_value = 100.0
+    mini_progress.value = 0.0
+    mini_progress.show_percentage = false
+    mini_panel.add_child(mini_progress)
+
+func _update_professional_mobile_hud() -> void:
+    var car := get_node_or_null("PlayerCar")
+    if not car:
+        return
+    var speed := abs(car.velocity.length()) * 3.6
+    if is_instance_valid(speed_label):
+        speed_label.text = "%d KM/H" % roundi(speed)
+    if is_instance_valid(speed_bar):
+        speed_bar.value = clamp(speed / 1.8, 0.0, 100.0)
+    if is_instance_valid(mini_progress):
+        mini_progress.value = race_bar.value if is_instance_valid(race_bar) else 0.0
 
 func _build_rewards_hud() -> void:
     var canvas := CanvasLayer.new()
@@ -1431,22 +1510,23 @@ func _on_health_changed(current_health: float, maximum_health: float) -> void:
 func _build_mobile_controls() -> void:
     mobile_controls = CanvasLayer.new()
     mobile_controls.name = "MobileControls"
+    mobile_controls.layer = 10
     add_child(mobile_controls)
 
     var title := Label.new()
-    title.text = "TOUCH CONTROLS"
+    title.text = "DRIVE"
     title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     title.add_theme_font_size_override("font_size", 18)
-    title.modulate = Color(1.0, 1.0, 1.0, 0.75)
+    title.modulate = Color(1.0, 1.0, 1.0, 0.65)
     title.set_anchors_preset(Control.PRESET_TOP_WIDE)
     title.position = Vector2(0.0, 18.0)
     title.size = Vector2(1280.0, 30.0)
     mobile_controls.add_child(title)
 
-    _add_touch_button(mobile_controls, "LEFT", "steer_left", Vector2(35.0, 585.0), Vector2(130.0, 95.0))
-    _add_touch_button(mobile_controls, "RIGHT", "steer_right", Vector2(180.0, 585.0), Vector2(130.0, 95.0))
-    _add_touch_button(mobile_controls, "BRAKE", "brake", Vector2(965.0, 585.0), Vector2(130.0, 95.0))
-    _add_touch_button(mobile_controls, "GO", "accelerate", Vector2(1110.0, 585.0), Vector2(130.0, 95.0))
+    _add_touch_button(mobile_controls, "LEFT", "steer_left", Vector2(30.0, 585.0), Vector2(145.0, 100.0))
+    _add_touch_button(mobile_controls, "RIGHT", "steer_right", Vector2(190.0, 585.0), Vector2(145.0, 100.0))
+    _add_touch_button(mobile_controls, "BRAKE", "brake", Vector2(955.0, 585.0), Vector2(145.0, 100.0))
+    _add_touch_button(mobile_controls, "GO", "accelerate", Vector2(1105.0, 585.0), Vector2(145.0, 100.0))
 
 func _add_touch_button(parent: CanvasLayer, label_text: String, action: String, button_position: Vector2, button_size: Vector2) -> void:
     var button := Button.new()
