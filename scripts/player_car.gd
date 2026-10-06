@@ -451,7 +451,7 @@ func _trigger_crash_effect(impact_speed: float) -> void:
 func _build_audio() -> void:
     engine_player = AudioStreamPlayer3D.new()
     engine_player.name = "EngineLow"
-    engine_player.stream = _create_tone(75.0, 0.5)
+    engine_player.stream = _create_engine_loop(78.0, 0.6)
     engine_player.volume_db = -13.0
     engine_player.max_distance = 55.0
     add_child(engine_player)
@@ -459,7 +459,7 @@ func _build_audio() -> void:
 
     engine_high_player = AudioStreamPlayer3D.new()
     engine_high_player.name = "EngineHigh"
-    engine_high_player.stream = _create_tone(155.0, 0.35)
+    engine_high_player.stream = _create_engine_loop(165.0, 0.5)
     engine_high_player.volume_db = -18.0
     engine_high_player.max_distance = 50.0
     add_child(engine_high_player)
@@ -504,7 +504,7 @@ func _build_audio() -> void:
 
     engine_load_player = AudioStreamPlayer3D.new()
     engine_load_player.name = "EngineLoad"
-    engine_load_player.stream = _create_tone(110.0, 0.4)
+    engine_load_player.stream = _create_engine_loop(118.0, 0.45)
     engine_load_player.volume_db = -28.0
     engine_load_player.max_distance = 48.0
     add_child(engine_load_player)
@@ -516,6 +516,33 @@ func _build_audio() -> void:
     gear_shift_player.volume_db = -16.0
     gear_shift_player.max_distance = 42.0
     add_child(gear_shift_player)
+
+func _create_engine_loop(base_frequency: float, duration: float) -> AudioStreamWAV:
+    var sample_rate := 22050
+    var samples := int(sample_rate * duration)
+    var data := PackedByteArray()
+    data.resize(samples * 2)
+
+    for i in samples:
+        var t := float(i) / sample_rate
+        var phase := TAU * base_frequency * t
+        var fundamental := sin(phase) * 0.58
+        var second := sin(phase * 2.01) * 0.22
+        var third := sin(phase * 3.0) * 0.12
+        var fourth := sin(phase * 4.01) * 0.06
+        var pulse := sin(phase * 0.5) * 0.04
+        var sample := fundamental + second + third + fourth + pulse
+        data.encode_s16(i * 2, int(clamp(sample, -1.0, 1.0) * 12000.0))
+
+    var stream := AudioStreamWAV.new()
+    stream.format = AudioStreamWAV.FORMAT_16_BITS
+    stream.mix_rate = sample_rate
+    stream.stereo = false
+    stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+    stream.loop_begin = 0
+    stream.loop_end = samples
+    stream.data = data
+    return stream
 
 func _create_tone(frequency: float, duration: float) -> AudioStreamWAV:
     var sample_rate := 22050
@@ -572,11 +599,11 @@ func _update_engine_audio(_delta: float) -> void:
 
     var speed_ratio := clamp(abs(speed) / max_speed, 0.0, 1.0)
     var throttle_ratio := 1.0 if Input.is_action_pressed("accelerate") else 0.35
-    engine_player.pitch_scale = lerp(0.82, 1.75, speed_ratio)
+    engine_player.pitch_scale = lerp(0.78, 1.92, speed_ratio)
     engine_player.volume_db = lerp(-20.0, -6.0, speed_ratio) + lerp(-2.0, 2.0, throttle_ratio)
 
     if is_instance_valid(engine_high_player):
-        engine_high_player.pitch_scale = lerp(0.72, 2.2, speed_ratio)
+        engine_high_player.pitch_scale = lerp(0.68, 2.45, speed_ratio)
         engine_high_player.volume_db = lerp(-29.0, -11.0, speed_ratio) + lerp(-2.0, 3.0, throttle_ratio)
 
     if is_instance_valid(engine_load_player):
@@ -617,6 +644,8 @@ func _update_driving_audio() -> void:
 
     if braking_now:
         _play_brake_audio()
+    if is_instance_valid(tire_player) and steering_now:
+        tire_player.volume_db += 2.0
     elif is_instance_valid(brake_player) and brake_player.playing:
         brake_player.stop()
 
