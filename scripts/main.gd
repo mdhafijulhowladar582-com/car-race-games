@@ -603,7 +603,7 @@ func _update_settings_label() -> void:
 func _on_sensitivity_changed(value: float) -> void:
     steering_sensitivity = value
     var car := get_node_or_null("PlayerCar")
-    if car:
+    if car and "steering_sensitivity" in car:
         car.steering_sensitivity = value
     _save_settings()
     _update_settings_label()
