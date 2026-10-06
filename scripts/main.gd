@@ -279,11 +279,8 @@ func _build_mobile_controls() -> void:
     mobile_controls.add_child(root)
 
     var hint := Label.new()
-    hint.text = "Touch Controls"
-    hint.set_anchors_preset(Control.PRESET_TOP_LEFT)
-    hint.position = Vector2(18.0, 18.0)
-    hint.add_theme_font_size_override("font_size", 18)
-    root.add_child(hint)
+    hint.text = ""
+    hint.visible = false
 
     _add_touch_button(root, "LEFT", "steer_left", true, 18.0)
     _add_touch_button(root, "RIGHT", "steer_right", true, 138.0)
@@ -291,23 +288,28 @@ func _build_mobile_controls() -> void:
     _add_touch_button(root, "GO", "accelerate", false, 18.0)
 
 func _add_touch_button(parent: Control, label_text: String, action_name: String, left_side: bool, bottom_offset: float) -> void:
-    var button := Button.new()
-    button.text = label_text
-    button.size = Vector2(100.0, 82.0)
-    button.focus_mode = Control.FOCUS_NONE
-    button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+    var button := TouchScreenButton.new()
+    button.name = "Touch_%s" % action_name
+    button.action = action_name
+    button.passby_press = true
+    var shape := RectangleShape2D.new()
+    shape.size = Vector2(100.0, 82.0)
+    button.shape = shape
+    button.shape_centered = true
+    var viewport_size := get_viewport().get_visible_rect().size
     if left_side:
-        button.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-        button.position = Vector2(bottom_offset, -100.0)
+        button.position = Vector2(bottom_offset + 50.0, viewport_size.y - 100.0)
     else:
-        button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-        button.position = Vector2(-100.0 - bottom_offset, -100.0)
-    button.button_down.connect(func() -> void:
-        Input.action_press(action_name)
-    )
-    button.button_up.connect(func() -> void:
-        Input.action_release(action_name)
-    )
+        button.position = Vector2(viewport_size.x - bottom_offset - 50.0, viewport_size.y - 100.0)
+    var label := Label.new()
+    label.text = label_text
+    label.position = Vector2(-50.0, -41.0)
+    label.size = Vector2(100.0, 82.0)
+    label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+    label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    label.add_theme_font_size_override("font_size", 18)
+    button.add_child(label)
     parent.add_child(button)
 
 func _finish_race() -> void:
