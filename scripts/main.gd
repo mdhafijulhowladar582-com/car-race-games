@@ -1075,24 +1075,56 @@ func _refresh_leaderboard() -> void:
     if leaderboard_label == null:
         return
 
-    if leaderboard_entries.is_empty():
-        leaderboard_label.text = "LEADERBOARD\n\nNo local records yet."
-    else:
-        var sorted_entries: Array = leaderboard_entries.duplicate()
-        sorted_entries.sort_custom(func(a, b) -> bool:
-            return _leaderboard_time_value(a) < _leaderboard_time_value(b)
-        )
+    var sorted_entries: Array = leaderboard_entries.duplicate()
+    sorted_entries.sort_custom(func(a, b) -> bool:
+        return _leaderboard_time_value(a) < _leaderboard_time_value(b)
+    )
 
-        var text_lines := ["LEADERBOARD", ""]
+    var online := online_leaderboard_status == "ONLINE" and not sorted_entries.is_empty()
+    var text_lines := ["ONLINE TOP 10" if online else "LOCAL LEADERBOARD", ""]
+
+    if sorted_entries.is_empty():
+        text_lines.append("No records yet.")
+    else:
         for i in range(mini(sorted_entries.size(), 10)):
             var entry = sorted_entries[i]
-            text_lines.append("%02d. %s — %s" % [i + 1, str(entry.get("name", "PLAYER")), str(entry.get("time", "--"))])
-        leaderboard_label.text = "\n".join(text_lines)
+            text_lines.append("%02d. %s — %s" % [i + 1, str(entry.get("name", "PLAYER")), _format_race_time(_leaderboard_time_value(entry))])
 
-    if online_leaderboard_url.is_empty() and firebase_auth_status == "GUEST":
-        online_leaderboard_status = "OFFLINE"
+    var rank := _get_own_rank(sorted_entries)
+    if rank > 0:
+        text_lines.append("")
+        text_lines.append("YOUR RANK: #%d" % rank)
+    elif firebase_auth_status == "SIGNED_IN":
+        text_lines.append("")
+        text_lines.append("YOUR RANK: Not ranked yet")
+
     if firebase_auth_status == "GUEST":
-        leaderboard_label.text += "\n\nGUEST MODE • Local scores only"
+        text_lines.append("")
+        text_lines.append("GUEST MODE • Online scores require Google Login")
+    elif online:
+        text_lines.append("")
+        text_lines.append("FIREBASE • ONLINE")
+    else:
+        text_lines.append("")
+        text_lines.append("OFFLINE • Showing local records")
+
+    leaderboard_label.text = "\n".join(text_lines)
+
+func _format_race_time(value: float) -> String:
+    if value == INF:
+        return "--"
+    var minutes := int(value / 60.0)
+    var seconds := fmod(value, 60.0)
+    return "%02d:%05.2f" % [minutes, seconds]
+
+func _get_own_rank(entries: Array) -> int:
+    if firebase_auth_status != "SIGNED_IN" or firebase_service == null:
+        return 0
+    for i in range(entries.size()):
+        var entry = entries[i]
+        if str(entry.get("userId", "")) == str(firebase_service.user_id):
+            return i + 1
+    return 0
 
 func _leaderboard_time_value(entry: Variant) -> float:
     if not (entry is Dictionary):
