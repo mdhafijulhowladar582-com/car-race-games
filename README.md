@@ -32,6 +32,15 @@ Godot 4.x 3D car racing game for Android and PC.
 - Android APK/AAB export still requires a Godot installation with Android export templates and the Android SDK/JDK
 - Release builds additionally require Android signing configuration
 
+## Multiple Cars
+
+- Sports: balanced performance with 34 top speed, 18 acceleration and 2.2 handling
+- Muscle: stronger acceleration with 30 top speed and 1.8 handling
+- GT: highest top speed at 38 with 16 acceleration and 2.4 handling
+- Car selection is available before every race
+- Selected car stats are shown in the setup screen
+- The selected model applies its driving performance before the countdown
+
 ## Game Modes
 
 - Quick Race: one-lap race against three AI opponents
