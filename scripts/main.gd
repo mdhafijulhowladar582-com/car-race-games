@@ -334,6 +334,43 @@ func _build_mode_select() -> void:
 
 func _apply_weather(weather: String) -> void:
     selected_weather = weather
+    _apply_professional_lighting(selected_weather)
+
+    if rain_particles and is_instance_valid(rain_particles):
+        rain_particles.queue_free()
+        rain_particles = null
+
+    if selected_weather == "RAIN":
+        rain_particles = GPUParticles3D.new()
+        rain_particles.name = "RainParticles"
+        rain_particles.amount = 900
+        rain_particles.lifetime = 1.2
+        rain_particles.visibility_aabb = AABB(Vector3(-35.0, 0.0, -80.0), Vector3(70.0, 18.0, 110.0))
+
+        var rain_mesh := QuadMesh.new()
+        rain_mesh.size = Vector2(0.035, 1.2)
+        var rain_material := StandardMaterial3D.new()
+        rain_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+        rain_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+        rain_material.albedo_color = Color(0.55, 0.7, 1.0, 0.55)
+        rain_mesh.material = rain_material
+        rain_particles.draw_pass_1 = rain_mesh
+
+        var process_material := ParticleProcessMaterial.new()
+        process_material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+        process_material.emission_box_extents = Vector3(35.0, 1.0, 55.0)
+        process_material.direction = Vector3(0.0, -1.0, 0.0)
+        process_material.initial_velocity_min = 18.0
+        process_material.initial_velocity_max = 26.0
+        process_material.gravity = Vector3(0.0, -4.0, 0.0)
+        process_material.spread = 4.0
+        rain_particles.process_material = process_material
+        rain_particles.position = Vector3(0.0, 12.0, -28.0)
+        add_child(rain_particles)
+
+    if fog_environment and is_instance_valid(fog_environment):
+        fog_environment.volumetric_fog_enabled = selected_weather == "RAIN"
+        fog_environment.volumetric_fog_density = 0.018 if selected_weather == "RAIN" else 0.008
 
 func _apply_map(map_name: String) -> void:
     selected_map = map_name
