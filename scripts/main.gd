@@ -609,10 +609,50 @@ func _build_professional_mobile_hud() -> void:
     add_child(speed_bar)
 
 func _build_weather_select() -> void:
+    var button := Button.new()
+    button.text = "WEATHER"
+    button.position = Vector2(930.0, 12.0)
+    button.size = Vector2(115.0, 42.0)
+    button.pressed.connect(_show_weather_selector)
+    add_child(button)
+
+func _show_weather_selector() -> void:
     weather_overlay = ColorRect.new()
-    weather_overlay.color = Color(0.0, 0.0, 0.0, 0.0)
-    weather_overlay.size = Vector2(1.0, 1.0)
+    weather_overlay.name = "WeatherSelectorOverlay"
+    weather_overlay.color = Color(0.02, 0.025, 0.04, 0.94)
+    weather_overlay.position = Vector2(430.0, 150.0)
+    weather_overlay.size = Vector2(420.0, 390.0)
     add_child(weather_overlay)
+
+    var title := Label.new()
+    title.text = "SELECT WEATHER"
+    title.position = Vector2(105.0, 25.0)
+    title.add_theme_font_size_override("font_size", 28)
+    weather_overlay.add_child(title)
+
+    var weather_types := ["DAY", "NIGHT", "RAIN"]
+    for i in range(weather_types.size()):
+        var weather_name := weather_types[i]
+        var button := Button.new()
+        button.text = weather_name
+        button.position = Vector2(70.0, 85.0 + i * 75.0)
+        button.size = Vector2(280.0, 55.0)
+        button.pressed.connect(func() -> void:
+            _apply_weather(weather_name)
+            weather_overlay.queue_free()
+            weather_overlay = null
+        )
+        weather_overlay.add_child(button)
+
+    var close := Button.new()
+    close.text = "CLOSE"
+    close.position = Vector2(150.0, 315.0)
+    close.size = Vector2(120.0, 45.0)
+    close.pressed.connect(func() -> void:
+        weather_overlay.queue_free()
+        weather_overlay = null
+    )
+    weather_overlay.add_child(close)
 
 func _build_map_select() -> void:
     map_label = Label.new()
