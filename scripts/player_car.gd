@@ -661,6 +661,7 @@ func _build_car() -> void:
     _add_cabin(car_root)
     _add_details(car_root)
     _add_premium_body_details(car_root)
+    _add_realistic_body_surfaces(car_root)
     _add_lights(car_root)
     _add_spoiler(car_root)
     _add_wheels()
@@ -817,6 +818,98 @@ func _add_premium_body_details(parent: Node3D) -> void:
     roof_glass.material_override = _material(Color(0.01, 0.035, 0.055), 0.3, 0.05)
     parent.add_child(roof_glass)
 
+func _add_realistic_body_surfaces(parent: Node3D) -> void:
+    var hood_center := MeshInstance3D.new()
+    var hood_mesh := SphereMesh.new()
+    hood_mesh.radius = 1.0
+    hood_mesh.height = 1.0
+    hood_center.mesh = hood_mesh
+    hood_center.scale = Vector3(0.94, 0.12, 0.72)
+    hood_center.position = Vector3(0.0, 0.46, -1.02)
+    hood_center.material_override = _material(customization_color, 0.7, 0.14)
+    parent.add_child(hood_center)
+
+    for x in [-0.78, 0.78]:
+        var front_fender := MeshInstance3D.new()
+        var fender_mesh := SphereMesh.new()
+        fender_mesh.radius = 0.72
+        fender_mesh.height = 1.44
+        front_fender.mesh = fender_mesh
+        front_fender.scale = Vector3(0.58, 0.58, 1.42)
+        front_fender.position = Vector3(x, 0.02, -1.15)
+        front_fender.material_override = _material(customization_color, 0.62, 0.16)
+        parent.add_child(front_fender)
+
+        var rear_fender := MeshInstance3D.new()
+        var rear_mesh := SphereMesh.new()
+        rear_mesh.radius = 0.72
+        rear_mesh.height = 1.44
+        rear_fender.mesh = rear_mesh
+        rear_fender.scale = Vector3(0.58, 0.58, 1.42)
+        rear_fender.position = Vector3(x, 0.02, 1.05)
+        rear_fender.material_override = _material(customization_color, 0.62, 0.16)
+        parent.add_child(rear_fender)
+
+    for x in [-0.91, 0.91]:
+        var sill := MeshInstance3D.new()
+        var sill_mesh := BoxMesh.new()
+        sill_mesh.size = Vector3(0.12, 0.08, 2.35)
+        sill.mesh = sill_mesh
+        sill.position = Vector3(x, -0.08, 0.18)
+        sill.material_override = _material(Color(0.18, 0.19, 0.22), 0.78, 0.2)
+        parent.add_child(sill)
+
+    for x in [-0.52, 0.52]:
+        var front_vent := MeshInstance3D.new()
+        var vent_mesh := BoxMesh.new()
+        vent_mesh.size = Vector3(0.26, 0.08, 0.42)
+        front_vent.mesh = vent_mesh
+        front_vent.position = Vector3(x, 0.5, -1.32)
+        front_vent.rotation_degrees = Vector3(-8.0, 0.0, 0.0)
+        front_vent.material_override = _material(Color(0.012, 0.014, 0.018), 0.3, 0.6)
+        parent.add_child(front_vent)
+
+    for z in [-0.48, 0.48]:
+        var door_line_left := MeshInstance3D.new()
+        var line_mesh := BoxMesh.new()
+        line_mesh.size = Vector3(0.025, 0.025, 0.82)
+        door_line_left.mesh = line_mesh
+        door_line_left.position = Vector3(-1.11, 0.16, z)
+        door_line_left.material_override = _material(Color(0.02, 0.02, 0.025), 0.4, 0.5)
+        parent.add_child(door_line_left)
+
+        var door_line_right := MeshInstance3D.new()
+        door_line_right.mesh = line_mesh.duplicate()
+        door_line_right.position = Vector3(1.11, 0.16, z)
+        door_line_right.material_override = _material(Color(0.02, 0.02, 0.025), 0.4, 0.5)
+        parent.add_child(door_line_right)
+
+    var windshield_strip := MeshInstance3D.new()
+    var strip_mesh := BoxMesh.new()
+    strip_mesh.size = Vector3(1.42, 0.06, 0.08)
+    windshield_strip.mesh = strip_mesh
+    windshield_strip.position = Vector3(0.0, 0.88, -0.44)
+    windshield_strip.rotation_degrees = Vector3(-12.0, 0.0, 0.0)
+    windshield_strip.material_override = _material(Color(0.16, 0.18, 0.2), 0.8, 0.16)
+    parent.add_child(windshield_strip)
+
+    var rear_diffuser := MeshInstance3D.new()
+    var diffuser_mesh := BoxMesh.new()
+    diffuser_mesh.size = Vector3(2.12, 0.28, 0.38)
+    rear_diffuser.mesh = diffuser_mesh
+    rear_diffuser.position = Vector3(0.0, -0.34, 1.93)
+    rear_diffuser.material_override = _material(Color(0.008, 0.009, 0.012), 0.75, 0.24)
+    parent.add_child(rear_diffuser)
+
+    for x in [-0.78, -0.26, 0.26, 0.78]:
+        var diffuser_fin := MeshInstance3D.new()
+        var fin_mesh := BoxMesh.new()
+        fin_mesh.size = Vector3(0.07, 0.22, 0.32)
+        diffuser_fin.mesh = fin_mesh
+        diffuser_fin.position = Vector3(x, -0.24, 1.91)
+        diffuser_fin.material_override = _material(Color(0.025, 0.026, 0.03), 0.65, 0.3)
+        parent.add_child(diffuser_fin)
+
 func _add_lights(parent: Node3D) -> void:
     for x in [-0.68, 0.68]:
         var headlight := MeshInstance3D.new()
@@ -893,6 +986,16 @@ func _add_wheel(pos: Vector3) -> void:
     brake_disc.rotation_degrees = Vector3(0.0, 0.0, 90.0)
     brake_disc.material_override = _material(Color(0.16, 0.17, 0.18), 0.92, 0.2)
     wheel_root.add_child(brake_disc)
+
+    for spoke_index in 5:
+        var spoke := MeshInstance3D.new()
+        var spoke_mesh := BoxMesh.new()
+        spoke_mesh.size = Vector3(0.055, 0.16, 0.28)
+        spoke.mesh = spoke_mesh
+        spoke.rotation_degrees = Vector3(0.0, 0.0, float(spoke_index) * 72.0)
+        spoke.position = Vector3(0.0, 0.0, 0.01)
+        spoke.material_override = _material(Color(0.58, 0.6, 0.64), 0.88, 0.14)
+        rim.add_child(spoke)
 
     var hub := MeshInstance3D.new()
     var hub_mesh := CylinderMesh.new()
