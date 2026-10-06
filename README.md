@@ -1,3 +1,13 @@
+## Settings
+
+- Graphics quality: LOW, MEDIUM and HIGH
+- Master volume control
+- Steering sensitivity control
+- Vibration toggle
+- Settings are saved locally and restored on startup
+- Graphics quality adjusts 3D rendering scale for mobile performance
+- Settings are available from the race setup screen
+
 ## Save System
 
 - Persistent JSON save file stored in Godot user storage
