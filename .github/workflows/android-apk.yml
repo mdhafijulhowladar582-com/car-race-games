@@ -13,6 +13,7 @@ on:
       - "addons/**"
       - "android_plugin/**"
       - "firestore.rules"
+      - "google-services.json"
       - ".github/workflows/android-apk.yml"
 
 jobs:
@@ -71,7 +72,12 @@ jobs:
         run: |
           mkdir -p ~/.config/godot
           rm -f ~/.config/godot/debug.keystore
-          keytool -genkeypair -v -keystore ~/.config/godot/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storetype PKCS12 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US" -noprompt
+          if [ -n "$DEBUG_KEYSTORE_BASE64" ]; then
+            echo "$DEBUG_KEYSTORE_BASE64" | base64 -d > ~/.config/godot/debug.keystore
+          else
+            echo "::warning::DEBUG_KEYSTORE_BASE64 secret missing - generating a temporary keystore. Google Sign-In requires a stable keystore SHA-1."
+            keytool -genkeypair -v -keystore ~/.config/godot/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storetype PKCS12 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US" -noprompt
+          fi
           test -f ~/.config/godot/debug.keystore
           keytool -list -keystore ~/.config/godot/debug.keystore -storepass android -alias androiddebugkey
           cat > ~/.config/godot/editor_settings-4.tres <<EOF
@@ -83,7 +89,6 @@ jobs:
           export/android/debug_keystore = "$HOME/.config/godot/debug.keystore"
           export/android/debug_keystore_user = "androiddebugkey"
           export/android/debug_keystore_pass = "android"
-          export/android/android_sdk_path = "$ANDROID_HOME"
           EOF
       - name: Install Godot Android build template
         shell: bash
