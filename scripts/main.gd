@@ -964,6 +964,8 @@ func _apply_customization(action_name: String) -> void:
     elif action_name == "upgrade":
         upgrade_level = mini(upgrade_level + 1, 3)
     _refresh_customization_label()
+    _update_car_selection_visuals()
+    _save_progress()
     if is_instance_valid(garage_info_label):
         garage_info_label.text = "CAR: %s\\nCOLOR: %s\\nWHEELS: %s\\nUPGRADE: %d/3\\n\\nSPEED: %d   ACCEL: %d   HANDLING: %.1f" % [_garage_car_name(), _garage_color_name(), selected_wheels, upgrade_level, _garage_speed(), _garage_accel(), _garage_handling()]
 
