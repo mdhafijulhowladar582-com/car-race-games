@@ -90,7 +90,7 @@ func _make_emission_material(color: Color, energy: float) -> StandardMaterial3D:
     material.emission_energy_multiplier = energy
     return material
 
-func _add_road_segment(position: Vector3, size: Vector3, rotation_y: float, material: StandardMaterial3D) -> void:
+func _add_road_segment(position: Vector3, size: Vector3, rotation_y: float, material: StandardMaterial3D, curb_material: StandardMaterial3D, red_curb_material: StandardMaterial3D, marking_material: StandardMaterial3D) -> void:
     var road_body := StaticBody3D.new()
     road_body.position = position
     road_body.rotation_degrees.y = rotation_y
@@ -108,6 +108,69 @@ func _add_road_segment(position: Vector3, size: Vector3, rotation_y: float, mate
     shape.size = size
     collision.shape = shape
     road_body.add_child(collision)
+
+    var curb_height := 0.12
+    var curb_width := 0.3
+    for side in [-1.0, 1.0]:
+        var curb := MeshInstance3D.new()
+        var curb_mesh := BoxMesh.new()
+        curb_mesh.size = Vector3(curb_width, curb_height, size.z)
+        curb.mesh = curb_mesh
+        curb.position = Vector3(side * (size.x * 0.5 + curb_width * 0.5), size.y * 0.5 + curb_height * 0.5, 0.0)
+        curb.material_override = curb_material
+        road_body.add_child(curb)
+
+        var red_curb := MeshInstance3D.new()
+        var red_mesh := BoxMesh.new()
+        red_mesh.size = Vector3(curb_width, curb_height + 0.01, minf(1.5, size.z * 0.12))
+        red_curb.mesh = red_mesh
+        red_curb.position = Vector3(side * (size.x * 0.5 + curb_width * 0.5), size.y * 0.5 + curb_height * 0.5, -size.z * 0.36)
+        red_curb.material_override = red_curb_material
+        road_body.add_child(red_curb)
+
+    var dash_count := maxi(2, int(size.z / 3.0))
+    for i in range(dash_count):
+        var dash := MeshInstance3D.new()
+        var dash_mesh := BoxMesh.new()
+        dash_mesh.size = Vector3(0.16, 0.025, 1.35)
+        dash.mesh = dash_mesh
+        dash.position = Vector3(0.0, size.y * 0.5 + 0.025, -size.z * 0.5 + 1.8 + i * 3.0)
+        dash.material_override = marking_material
+        road_body.add_child(dash)
+
+func _add_guardrail(position: Vector3, rotation_y: float, length: float) -> void:
+    var rail := StaticBody3D.new()
+    rail.position = position
+    rail.rotation_degrees.y = rotation_y
+    add_child(rail)
+
+    var rail_material := _make_material(Color(0.35, 0.38, 0.42), 0.75, 0.35)
+    var post_material := _make_material(Color(0.16, 0.18, 0.2), 0.7, 0.4)
+
+    var beam := MeshInstance3D.new()
+    var beam_mesh := BoxMesh.new()
+    beam_mesh.size = Vector3(0.18, 0.5, length)
+    beam.mesh = beam_mesh
+    beam.position.y = 0.85
+    beam.material_override = rail_material
+    rail.add_child(beam)
+
+    var post_count := maxi(2, int(length / 2.5))
+    for i in range(post_count):
+        var post := MeshInstance3D.new()
+        var post_mesh := BoxMesh.new()
+        post_mesh.size = Vector3(0.16, 0.85, 0.16)
+        post.mesh = post_mesh
+        post.position = Vector3(0.0, 0.45, -length * 0.5 + 0.8 + i * (length - 1.6) / float(post_count - 1))
+        post.material_override = post_material
+        rail.add_child(post)
+
+    var collision := CollisionShape3D.new()
+    var shape := BoxShape3D.new()
+    shape.size = Vector3(0.35, 1.0, length)
+    collision.shape = shape
+    collision.position.y = 0.7
+    rail.add_child(collision)
 
 func _add_ramp(position: Vector3, rotation_y: float) -> void:
     var ramp := StaticBody3D.new()
