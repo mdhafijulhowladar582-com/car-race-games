@@ -234,6 +234,7 @@ func _physics_process(delta: float) -> void:
 
 func _build_mobile_controls() -> void:
     mobile_controls = CanvasLayer.new()
+    mobile_controls.layer = 15
     add_child(mobile_controls)
 
     var root := Control.new()
@@ -243,22 +244,28 @@ func _build_mobile_controls() -> void:
 
     var hint := Label.new()
     hint.text = "Touch Controls"
+    hint.set_anchors_preset(Control.PRESET_TOP_LEFT)
     hint.position = Vector2(18.0, 18.0)
     hint.add_theme_font_size_override("font_size", 18)
     root.add_child(hint)
 
-    _add_touch_button(root, "LEFT", Vector2(35.0, 590.0), "steer_left")
-    _add_touch_button(root, "RIGHT", Vector2(155.0, 590.0), "steer_right")
-    _add_touch_button(root, "BRAKE", Vector2(930.0, 590.0), "brake")
-    _add_touch_button(root, "GO", Vector2(1050.0, 590.0), "accelerate")
+    _add_touch_button(root, "LEFT", "steer_left", true, 18.0)
+    _add_touch_button(root, "RIGHT", "steer_right", true, 138.0)
+    _add_touch_button(root, "BRAKE", "brake", false, 138.0)
+    _add_touch_button(root, "GO", "accelerate", false, 18.0)
 
-func _add_touch_button(parent: Control, label_text: String, button_position: Vector2, action_name: String) -> void:
+func _add_touch_button(parent: Control, label_text: String, action_name: String, left_side: bool, bottom_offset: float) -> void:
     var button := Button.new()
     button.text = label_text
-    button.position = button_position
     button.size = Vector2(100.0, 82.0)
     button.focus_mode = Control.FOCUS_NONE
     button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+    if left_side:
+        button.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+        button.position = Vector2(bottom_offset, -100.0)
+    else:
+        button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+        button.position = Vector2(-100.0 - bottom_offset, -100.0)
     button.button_down.connect(func() -> void:
         Input.action_press(action_name)
     )
@@ -399,7 +406,8 @@ func _build_minimap() -> void:
 
     var panel := ColorRect.new()
     panel.name = "MinimapPanel"
-    panel.position = Vector2(965.0, 70.0)
+    panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+    panel.position = Vector2(-300.0, 70.0)
     panel.size = Vector2(285.0, 190.0)
     panel.color = Color(0.015, 0.02, 0.035, 0.88)
     minimap_canvas.add_child(panel)
