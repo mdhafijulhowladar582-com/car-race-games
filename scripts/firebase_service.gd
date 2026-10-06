@@ -48,7 +48,7 @@ func sign_in_with_google_id_token(google_id_token: String) -> void:
 
     var headers := PackedStringArray(["Content-Type: application/json"])
     var payload := {
-        "postBody": "id_token=%s&providerId=google.com" % Uri.encode_www_form_component(token),
+        "postBody": "id_token=%s&providerId=google.com" % token.uri_encode(),
         "requestUri": "https://localhost",
         "returnIdpCredential": true,
         "returnSecureToken": true
