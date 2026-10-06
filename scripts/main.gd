@@ -514,6 +514,7 @@ func _build_ai_opponents() -> void:
         ai_opponents.append(ai)
         ai.setup(track_path, i)
         ai.race_active = false
+    _update_minimap_route()
 
 func _build_game_over_ui() -> void:
     game_over_overlay = ColorRect.new()
