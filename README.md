@@ -32,6 +32,15 @@ Godot 4.x 3D car racing game for Android and PC.
 - Android APK/AAB export still requires a Godot installation with Android export templates and the Android SDK/JDK
 - Release builds additionally require Android signing configuration
 
+## AI Opponents
+
+- Three computer-controlled opponent cars spawn on the starting grid
+- Waypoint-based driving follows the full road route through bends and ramps
+- Independent acceleration, steering and top speed create competitive movement
+- AI starts with the 3-2-1-GO countdown and stops at the finish
+- Live player position updates against all AI opponents
+- Lightweight procedural AI cars require no external assets
+
 ## Advanced Race System
 
 - 3-2-1-GO race countdown
