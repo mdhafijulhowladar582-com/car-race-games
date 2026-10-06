@@ -321,6 +321,8 @@ func _finish_race() -> void:
     if race_label:
         race_label.text = "FINISH"
     _record_local_result()
+    if firebase_auth_status == "SIGNED_IN" and firebase_service:
+        firebase_service.save_best_score(race_elapsed, selected_map, selected_car)
     _show_race_results(reward_coins, reward_xp)
 
 func _record_local_result() -> void:
@@ -1035,6 +1037,8 @@ func _setup_firebase_service() -> void:
     firebase_service.leaderboard_failed.connect(_on_firebase_leaderboard_failed)
     firebase_service.auth_changed.connect(_on_firebase_auth_changed)
     firebase_service.auth_failed.connect(_on_firebase_auth_failed)
+    firebase_service.score_saved.connect(_on_firebase_score_saved)
+    firebase_service.score_failed.connect(_on_firebase_score_failed)
     online_leaderboard_status = "CONNECTING"
     firebase_service.continue_as_guest()
     firebase_service.load_public_leaderboard()
@@ -1112,6 +1116,15 @@ func _on_firebase_auth_changed(authenticated: bool, name: String) -> void:
         firebase_auth_status = "GUEST"
         firebase_display_name = ""
     _update_auth_ui()
+
+func _on_firebase_score_saved() -> void:
+    online_leaderboard_status = "ONLINE"
+    if leaderboard_label and is_instance_valid(leaderboard_label):
+        _refresh_leaderboard()
+
+func _on_firebase_score_failed(message: String) -> void:
+    if firebase_auth_status == "SIGNED_IN":
+        online_leaderboard_status = "OFFLINE"
 
 func _on_firebase_auth_failed(message: String) -> void:
     firebase_auth_status = "AUTH_ERROR"
