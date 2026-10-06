@@ -18,6 +18,7 @@ var finish_z := -66.0
 func _ready() -> void:
     _build_environment()
     _build_road()
+    _build_environment_scenery()
     _build_scenery()
     _build_mobile_controls()
     _build_health_hud()
@@ -218,6 +219,176 @@ func _add_road_sign(position: Vector3, rotation_y: float, text_value: String) ->
     label.modulate = Color(0.05, 0.05, 0.05)
     label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
     sign.add_child(label)
+
+func _build_environment_scenery() -> void:
+    var grass := _make_material(Color(0.07, 0.22, 0.09), 0.0, 0.95)
+    var mountain := _make_material(Color(0.12, 0.16, 0.2), 0.0, 1.0)
+    var building := _make_material(Color(0.22, 0.25, 0.3), 0.15, 0.82)
+    var glass := _make_emission_material(Color(0.12, 0.28, 0.48), 0.45)
+    var lamp := _make_material(Color(0.08, 0.09, 0.1), 0.75, 0.35)
+    var sign := _make_emission_material(Color(0.95, 0.7, 0.12), 0.2)
+
+    _add_ground(grass)
+    _add_mountain_range(mountain)
+    _add_tree_line(grass)
+    _add_city_blocks(building, glass)
+    _add_lamp_posts(lamp)
+    _add_track_signs(sign)
+
+func _add_ground(material: StandardMaterial3D) -> void:
+    var ground := MeshInstance3D.new()
+    var mesh := BoxMesh.new()
+    mesh.size = Vector3(70.0, 0.5, 115.0)
+    ground.mesh = mesh
+    ground.position = Vector3(4.0, -0.45, -25.0)
+    ground.material_override = material
+    add_child(ground)
+
+func _add_mountain_range(material: StandardMaterial3D) -> void:
+    for i in range(8):
+        var m := MeshInstance3D.new()
+        var mesh := PrismMesh.new()
+        mesh.size = Vector3(12.0, 10.0 + float(i % 3) * 3.0, 8.0)
+        m.mesh = mesh
+        m.position = Vector3(-28.0 + i * 8.0, 4.5, -72.0)
+        m.rotation_degrees.y = float(i * 17)
+        m.material_override = material
+        add_child(m)
+
+func _add_tree_line(material: StandardMaterial3D) -> void:
+    for i in range(10):
+        var z := 8.0 - i * 8.0
+        _add_tree(Vector3(-11.0, 0.0, z), material, 0.9 + float(i % 3) * 0.12)
+        if i > 2:
+            _add_tree(Vector3(18.0, 0.2 + float(i) * 0.08, z - 4.0), material, 1.0 + float((i + 1) % 3) * 0.1)
+
+func _add_tree(position: Vector3, material: StandardMaterial3D, scale_value: float) -> void:
+    var tree := Node3D.new()
+    tree.position = position
+    tree.scale = Vector3.ONE * scale_value
+    add_child(tree)
+
+    var trunk := MeshInstance3D.new()
+    var trunk_mesh := CylinderMesh.new()
+    trunk_mesh.top_radius = 0.18
+    trunk_mesh.bottom_radius = 0.3
+    trunk_mesh.height = 2.4
+    trunk.mesh = trunk_mesh
+    trunk.position.y = 1.2
+    trunk.material_override = _make_material(Color(0.25, 0.12, 0.05), 0.0, 1.0)
+    tree.add_child(trunk)
+
+    var crown := MeshInstance3D.new()
+    var crown_mesh := SphereMesh.new()
+    crown_mesh.radius = 1.45
+    crown_mesh.height = 2.8
+    crown.mesh = crown_mesh
+    crown.position.y = 3.0
+    crown.material_override = material
+    tree.add_child(crown)
+
+func _add_city_blocks(building_material: StandardMaterial3D, glass_material: StandardMaterial3D) -> void:
+    var data := [
+        [Vector3(-16.0, 2.5, -8.0), Vector3(6.0, 5.0, 6.0)],
+        [Vector3(18.0, 3.5, -18.0), Vector3(7.0, 7.0, 7.0)],
+        [Vector3(-18.0, 4.5, -36.0), Vector3(8.0, 9.0, 8.0)],
+        [Vector3(20.0, 3.0, -47.0), Vector3(6.0, 6.0, 6.0)]
+    ]
+    for item in data:
+        _add_building(item[0], item[1], building_material, glass_material)
+
+func _add_building(position: Vector3, size: Vector3, building_material: StandardMaterial3D, glass_material: StandardMaterial3D) -> void:
+    var building := MeshInstance3D.new()
+    var mesh := BoxMesh.new()
+    mesh.size = size
+    building.mesh = mesh
+    building.position = position
+    building.material_override = building_material
+    add_child(building)
+
+    for y in range(1, maxi(2, int(size.y / 2.0))):
+        var window := MeshInstance3D.new()
+        var window_mesh := BoxMesh.new()
+        window_mesh.size = Vector3(size.x * 0.6, 0.45, 0.06)
+        window.mesh = window_mesh
+        window.position = position + Vector3(0.0, -size.y * 0.5 + y * 1.5, size.z * 0.51)
+        window.material_override = glass_material
+        add_child(window)
+
+func _add_lamp_posts(material: StandardMaterial3D) -> void:
+    for i in range(7):
+        var z := 6.0 - i * 9.0
+        _add_lamp_post(Vector3(-8.0, 0.0, z), material, -1.0)
+        if i % 2 == 0:
+            _add_lamp_post(Vector3(15.0, 0.45 + float(i) * 0.06, z - 3.0), material, 1.0)
+
+func _add_lamp_post(position: Vector3, material: StandardMaterial3D, side: float) -> void:
+    var post := Node3D.new()
+    post.position = position
+    add_child(post)
+
+    var pole := MeshInstance3D.new()
+    var pole_mesh := CylinderMesh.new()
+    pole_mesh.top_radius = 0.08
+    pole_mesh.bottom_radius = 0.12
+    pole_mesh.height = 4.0
+    pole.mesh = pole_mesh
+    pole.position.y = 2.0
+    pole.material_override = material
+    post.add_child(pole)
+
+    var arm := MeshInstance3D.new()
+    var arm_mesh := BoxMesh.new()
+    arm_mesh.size = Vector3(1.1, 0.12, 0.12)
+    arm.mesh = arm_mesh
+    arm.position = Vector3(side * 0.45, 4.0, 0.0)
+    arm.material_override = material
+    post.add_child(arm)
+
+    var light := OmniLight3D.new()
+    light.position = Vector3(side * 0.85, 3.85, 0.0)
+    light.omni_range = 8.0
+    light.light_energy = 1.0
+    light.light_color = Color(1.0, 0.82, 0.55)
+    post.add_child(light)
+
+    var bulb := MeshInstance3D.new()
+    var bulb_mesh := SphereMesh.new()
+    bulb_mesh.radius = 0.16
+    bulb_mesh.height = 0.32
+    bulb.mesh = bulb_mesh
+    bulb.position = light.position
+    bulb.material_override = _make_emission_material(Color(1.0, 0.75, 0.35), 2.0)
+    post.add_child(bulb)
+
+func _add_track_signs(material: StandardMaterial3D) -> void:
+    _add_sign(Vector3(-7.2, 1.2, -12.0), 8.0, "CURVE")
+    _add_sign(Vector3(15.0, 1.3, -34.0), -18.0, "RAMP")
+    _add_sign(Vector3(14.5, 1.3, -57.0), -10.0, "FINISH")
+
+func _add_sign(position: Vector3, rotation_y: float, text_value: String) -> void:
+    var sign_root := Node3D.new()
+    sign_root.position = position
+    sign_root.rotation_degrees.y = rotation_y
+    add_child(sign_root)
+
+    var pole := MeshInstance3D.new()
+    var pole_mesh := CylinderMesh.new()
+    pole_mesh.top_radius = 0.06
+    pole_mesh.bottom_radius = 0.09
+    pole_mesh.height = 2.2
+    pole.mesh = pole_mesh
+    pole.position.y = 1.1
+    pole.material_override = _make_material(Color(0.16, 0.17, 0.19), 0.55, 0.5)
+    sign_root.add_child(pole)
+
+    var board := MeshInstance3D.new()
+    var board_mesh := BoxMesh.new()
+    board_mesh.size = Vector3(2.8, 1.0, 0.12)
+    board.mesh = board_mesh
+    board.position.y = 2.35
+    board.material_override = material
+    sign_root.add_child(board)
 
 func _build_road() -> void:
     var road_material := _make_material(Color(0.075, 0.08, 0.095), 0.0, 0.9)
