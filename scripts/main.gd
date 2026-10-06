@@ -260,7 +260,7 @@ func _physics_process(delta: float) -> void:
 
     player_race_position = 1
     for ai in ai_opponents:
-        if is_instance_valid(ai) and ai.global_position.z < car.global_position.z:
+        if is_instance_valid(ai) and _get_track_progress(ai.global_position) > player_track_progress:
             player_race_position += 1
     if position_label:
         position_label.text = "POSITION %d/%d" % [player_race_position, ai_opponents.size() + 1]
@@ -775,30 +775,30 @@ func _sync_race_start_to_map() -> void:
 func _build_rewards_hud() -> void:
     reward_label = Label.new()
     reward_label.text = "Rewards"
-    reward_label.position = Vector2(20.0, 90.0)
+    reward_label.position = Vector2(1000.0, 85.0)
     add_child(reward_label)
     coins_label = Label.new()
     coins_label.text = "Coins: 0"
-    coins_label.position = Vector2(20.0, 118.0)
+    coins_label.position = Vector2(1000.0, 112.0)
     add_child(coins_label)
 
 func _build_professional_mobile_hud() -> void:
     speed_label = Label.new()
     speed_label.text = "0 KM/H"
-    speed_label.position = Vector2(1000.0, 600.0)
+    speed_label.position = Vector2(540.0, 610.0)
     add_child(speed_label)
     speed_bar = ProgressBar.new()
     speed_bar.min_value = 0.0
     speed_bar.max_value = 140.0
     speed_bar.value = 0.0
-    speed_bar.position = Vector2(960.0, 640.0)
+    speed_bar.position = Vector2(500.0, 650.0)
     speed_bar.size = Vector2(200.0, 15.0)
     add_child(speed_bar)
 
 func _build_weather_select() -> void:
     var button := Button.new()
     button.text = "WEATHER"
-    button.position = Vector2(930.0, 12.0)
+    button.position = Vector2(125.0, 42.0)
     button.size = Vector2(115.0, 42.0)
     button.pressed.connect(_show_weather_selector)
     add_child(button)
@@ -844,13 +844,13 @@ func _show_weather_selector() -> void:
 func _build_map_select() -> void:
     map_label = Label.new()
     map_label.text = "MAP: %s" % selected_map
-    map_label.position = Vector2(700.0, 15.0)
+    map_label.position = Vector2(20.0, 10.0)
     map_label.add_theme_font_size_override("font_size", 20)
     add_child(map_label)
 
     var button := Button.new()
     button.text = "MAP"
-    button.position = Vector2(840.0, 12.0)
+    button.position = Vector2(20.0, 42.0)
     button.size = Vector2(90.0, 42.0)
     button.pressed.connect(_show_map_selector)
     add_child(button)
@@ -895,7 +895,7 @@ func _show_map_selector() -> void:
 func _build_settings_button() -> void:
     var button := Button.new()
     button.text = "Settings"
-    button.position = Vector2(1160.0, 20.0)
+    button.position = Vector2(380.0, 42.0)
     button.size = Vector2(100.0, 42.0)
     button.pressed.connect(_show_settings)
     add_child(button)
@@ -992,7 +992,7 @@ func _save_settings() -> void:
 func _build_leaderboard_button() -> void:
     var button := Button.new()
     button.text = "Leaderboard"
-    button.position = Vector2(1000.0, 65.0)
+    button.position = Vector2(505.0, 42.0)
     button.size = Vector2(150.0, 52.0)
     button.pressed.connect(_show_leaderboard)
     add_child(button)
@@ -1004,14 +1004,14 @@ func _build_auth_ui() -> void:
     google_signin.signed_out.connect(_on_google_signed_out)
 
     auth_button = Button.new()
-    auth_button.position = Vector2(820.0, 65.0)
+    auth_button.position = Vector2(650.0, 42.0)
     auth_button.size = Vector2(175.0, 42.0)
     auth_button.text = "GOOGLE LOGIN"
     auth_button.pressed.connect(_on_auth_button_pressed)
     add_child(auth_button)
 
     auth_status_label = Label.new()
-    auth_status_label.position = Vector2(820.0, 107.0)
+    auth_status_label.position = Vector2(650.0, 85.0)
     auth_status_label.size = Vector2(175.0, 30.0)
     auth_status_label.text = "GUEST MODE"
     auth_status_label.add_theme_font_size_override("font_size", 14)
@@ -2135,7 +2135,7 @@ func _add_curve_apex_marker(position: Vector3) -> void:
 func _build_car_select_button() -> void:
     var button := Button.new()
     button.text = "CARS"
-    button.position = Vector2(1050.0, 12.0)
+    button.position = Vector2(250.0, 42.0)
     button.size = Vector2(115.0, 42.0)
     button.pressed.connect(_show_car_selector)
     add_child(button)
@@ -2251,7 +2251,9 @@ func _apply_customization(action_name: String) -> void:
                 upgrade_level += 1
         _:
             return
+    _apply_selected_car_to_player()
     _update_car_selection_label()
+    _save_progress()
 
 func _apply_selected_car_to_player() -> void:
     var car := get_node_or_null("PlayerCar")
