@@ -616,6 +616,7 @@ func _build_mode_select() -> void:
 
 func _apply_weather(weather: String) -> void:
     selected_weather = weather
+    _save_progress()
     _apply_professional_lighting(selected_weather)
 
     if rain_particles and is_instance_valid(rain_particles):
@@ -656,6 +657,7 @@ func _apply_weather(weather: String) -> void:
 
 func _apply_map(map_name: String) -> void:
     selected_map = map_name
+    _save_progress()
     _rebuild_map()
     if map_label:
         map_label.text = "MAP: %s" % selected_map
