@@ -56,12 +56,21 @@ var coins_label: Label
 var speed_label: Label
 var speed_bar: ProgressBar
 var mini_progress: ProgressBar
+var settings_overlay: ColorRect
+var settings_label: Label
+var graphics_quality := "MEDIUM"
+var master_volume := 1.0
+var steering_sensitivity := 1.0
+var vibration_enabled := true
+var settings_path := "user://car_race_settings.json"
+
 var race_start_z := 15.0
 var finish_z := -66.0
 
 
 func _ready() -> void:
     _load_progress()
+    _load_settings()
     _build_environment()
     _build_road()
     _build_environment_scenery()
@@ -79,6 +88,7 @@ func _ready() -> void:
     _build_professional_mobile_hud()
     _build_weather_select()
     _build_map_select()
+    _build_settings_button()
     _update_map_label()
     _update_rewards_hud()
 
@@ -867,6 +877,108 @@ func _apply_map(map_value: String) -> void:
 func _update_map_label() -> void:
     if is_instance_valid(map_label):
         map_label.text = "MAP: " + selected_map
+
+
+func _build_settings_button() -> void:
+    var button := Button.new()
+    button.text = "SETTINGS"
+    button.position = Vector2(920.0, 540.0)
+    button.size = Vector2(180.0, 58.0)
+    button.focus_mode = Control.FOCUS_NONE
+    button.pressed.connect(_open_settings)
+    mode_overlay.add_child(button)
+
+func _open_settings() -> void:
+    settings_overlay = ColorRect.new()
+    settings_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    settings_overlay.color = Color(0.01, 0.015, 0.025, 0.96)
+    settings_overlay.z_index = 50
+    mode_overlay.add_child(settings_overlay)
+    var title := Label.new()
+    title.text = "SETTINGS"
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title.position = Vector2(390.0, 45.0)
+    title.size = Vector2(500.0, 60.0)
+    title.add_theme_font_size_override("font_size", 40)
+    settings_overlay.add_child(title)
+    settings_label = Label.new()
+    settings_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    settings_label.position = Vector2(330.0, 115.0)
+    settings_label.size = Vector2(620.0, 80.0)
+    settings_label.add_theme_font_size_override("font_size", 22)
+    settings_overlay.add_child(settings_label)
+    _add_settings_button("GRAPHICS: " + graphics_quality, Vector2(390.0, 220.0), "_cycle_graphics")
+    _add_settings_button("VOLUME: " + str(roundi(master_volume * 100.0)) + "%", Vector2(390.0, 280.0), "_cycle_volume")
+    _add_settings_button("STEERING: " + str(snapped(steering_sensitivity, 0.1)), Vector2(390.0, 340.0), "_cycle_sensitivity")
+    _add_settings_button("VIBRATION: " + ("ON" if vibration_enabled else "OFF"), Vector2(390.0, 400.0), "_toggle_vibration")
+    _add_settings_button("BACK", Vector2(390.0, 475.0), "_close_settings")
+    _refresh_settings_label()
+
+func _add_settings_button(text_value: String, button_position: Vector2, method_name: String) -> void:
+    var button := Button.new()
+    button.text = text_value
+    button.position = button_position
+    button.size = Vector2(500.0, 50.0)
+    button.focus_mode = Control.FOCUS_NONE
+    button.pressed.connect(Callable(self, method_name))
+    settings_overlay.add_child(button)
+
+func _refresh_settings_label() -> void:
+    if is_instance_valid(settings_label):
+        settings_label.text = "Graphics " + graphics_quality + "   Volume " + str(roundi(master_volume * 100.0)) + "%\nSteering " + str(snapped(steering_sensitivity, 0.1)) + "   Vibration " + ("ON" if vibration_enabled else "OFF")
+
+func _cycle_graphics() -> void:
+    graphics_quality = "HIGH" if graphics_quality == "MEDIUM" else ("LOW" if graphics_quality == "HIGH" else "MEDIUM")
+    _apply_graphics_settings()
+    _save_settings()
+    _open_settings()
+
+func _cycle_volume() -> void:
+    master_volume -= 0.25
+    if master_volume < 0.0:
+        master_volume = 1.0
+    AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Master"), linear_to_db(master_volume) if master_volume > 0.0 else -80.0)
+    _save_settings()
+    _open_settings()
+
+func _cycle_sensitivity() -> void:
+    steering_sensitivity += 0.25
+    if steering_sensitivity > 1.5:
+        steering_sensitivity = 0.5
+    _save_settings()
+    _open_settings()
+
+func _toggle_vibration() -> void:
+    vibration_enabled = not vibration_enabled
+    _save_settings()
+    _open_settings()
+
+func _close_settings() -> void:
+    if is_instance_valid(settings_overlay):
+        settings_overlay.queue_free()
+        settings_overlay = null
+
+func _apply_graphics_settings() -> void:
+    get_tree().root.scaling_3d_scale = 0.75 if graphics_quality == "LOW" else (1.0 if graphics_quality == "HIGH" else 0.85)
+
+func _save_settings() -> void:
+    var data := {"graphics_quality": graphics_quality, "master_volume": master_volume, "steering_sensitivity": steering_sensitivity, "vibration_enabled": vibration_enabled}
+    var file := FileAccess.open(settings_path, FileAccess.WRITE)
+    if file:
+        file.store_string(JSON.stringify(data))
+
+func _load_settings() -> void:
+    if FileAccess.file_exists(settings_path):
+        var file := FileAccess.open(settings_path, FileAccess.READ)
+        if file:
+            var parsed = JSON.parse_string(file.get_as_text())
+            if typeof(parsed) == TYPE_DICTIONARY:
+                graphics_quality = str(parsed.get("graphics_quality", "MEDIUM"))
+                master_volume = float(parsed.get("master_volume", 1.0))
+                steering_sensitivity = float(parsed.get("steering_sensitivity", 1.0))
+                vibration_enabled = bool(parsed.get("vibration_enabled", true))
+    _apply_graphics_settings()
+    AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Master"), linear_to_db(master_volume) if master_volume > 0.0 else -80.0)
 
 func _build_weather_select() -> void:
     var panel := Panel.new()
