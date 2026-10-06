@@ -39,6 +39,12 @@ var smoke_particles: CPUParticles3D
 var spark_particles: CPUParticles3D
 var skid_marks: Array[MeshInstance3D] = []
 var crash_light: OmniLight3D
+var camera: Camera3D
+var camera_base_position := Vector3(0.0, 4.5, 8.0)
+var camera_base_rotation := Vector3(-15.0, 180.0, 0.0)
+var camera_shake := 0.0
+var camera_shake_strength := 0.0
+var camera_cinematic := false
 
 signal health_changed(current_health: float, maximum_health: float)
 signal game_over
@@ -49,6 +55,11 @@ func _ready() -> void:
     _build_car()
     _build_audio()
     _build_effects()
+    camera = get_node_or_null("Camera3D") as Camera3D
+    if is_instance_valid(camera):
+        camera_base_position = camera.position
+        camera_base_rotation = camera.rotation_degrees
+        camera.fov = 70.0
     health_changed.emit(health, max_health)
 
 func _physics_process(delta: float) -> void:
@@ -75,6 +86,47 @@ func _physics_process(delta: float) -> void:
 
     if Input.is_action_pressed("brake") and abs(speed) > 1.0:
         _play_brake_audio()
+
+func _update_camera(delta: float) -> void:
+    if not is_instance_valid(camera):
+        return
+
+    var speed_ratio := clamp(abs(speed) / max_speed, 0.0, 1.0)
+    var steer_ratio := clamp(steering / max(steering_sensitivity, 0.01), -1.0, 1.0)
+    var target_fov := lerp(68.0, 82.0, speed_ratio)
+    camera.fov = lerp(camera.fov, target_fov, minf(delta * 5.0, 1.0))
+
+    if camera_cinematic:
+        camera.position = camera.position.lerp(Vector3(0.0, 5.8, 11.5), minf(delta * 2.5, 1.0))
+        camera.rotation_degrees = camera.rotation_degrees.lerp(Vector3(-18.0, 180.0, 0.0), minf(delta * 2.5, 1.0))
+        camera.fov = lerp(camera.fov, 62.0, minf(delta * 2.0, 1.0))
+        return
+
+    camera_shake = maxf(0.0, camera_shake - delta)
+    var shake_ratio := clamp(camera_shake, 0.0, 1.0)
+    var shake_x := sin(Time.get_ticks_msec() * 0.043) * camera_shake_strength * shake_ratio
+    var shake_y := cos(Time.get_ticks_msec() * 0.057) * camera_shake_strength * shake_ratio
+
+    var target_position := camera_base_position
+    target_position.x += steer_ratio * 0.32
+    target_position.y += speed_ratio * 0.22
+    target_position.z -= speed_ratio * 0.65
+    target_position.x += shake_x
+    target_position.y += shake_y
+
+    var target_rotation := camera_base_rotation
+    target_rotation.x -= speed_ratio * 2.0
+    target_rotation.z = -steer_ratio * 3.2 + shake_y * 1.8
+
+    camera.position = camera.position.lerp(target_position, minf(delta * 7.0, 1.0))
+    camera.rotation_degrees = camera.rotation_degrees.lerp(target_rotation, minf(delta * 7.0, 1.0))
+
+func trigger_camera_shake(strength: float = 0.18, duration: float = 0.28) -> void:
+    camera_shake = maxf(camera_shake, duration)
+    camera_shake_strength = maxf(camera_shake_strength, strength)
+
+func set_finish_cinematic(enabled: bool) -> void:
+    camera_cinematic = enabled
 
 func _update_speed(throttle: float, delta: float) -> void:
     if throttle > 0.0:
@@ -119,6 +171,7 @@ func _apply_movement(delta: float) -> void:
                 take_damage(damage)
                 crash_impact.emit()
                 _trigger_crash_effect(impact_speed)
+                trigger_camera_shake(clamp(impact_speed * 0.012, 0.12, 0.38), 0.32)
                 _play_crash_audio()
 
 func _build_effects() -> void:
