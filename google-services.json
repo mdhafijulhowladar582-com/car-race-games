@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "798392879527",
+    "project_id": "carres-8d409",
+    "storage_bucket": "carres-8d409.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:798392879527:android:be8eb7fe8acbcfe7e5ce82",
+        "android_client_info": {
+          "package_name": "com.hafijul.novalabs.carrace"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "798392879527-le0lmg8v3efab4ls9kdh8bk8fl4m02q1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhvuZL5GDJuq3NedMlLMAGPt7XujpZRow"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "798392879527-le0lmg8v3efab4ls9kdh8bk8fl4m02q1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:798392879527:android:6a48ce4d43091a8be5ce82",
+        "android_client_info": {
+          "package_name": "com.hafijulnovalabs.carracegames"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "798392879527-le0lmg8v3efab4ls9kdh8bk8fl4m02q1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhvuZL5GDJuq3NedMlLMAGPt7XujpZRow"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "798392879527-le0lmg8v3efab4ls9kdh8bk8fl4m02q1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
