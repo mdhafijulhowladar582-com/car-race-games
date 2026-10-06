@@ -10,8 +10,20 @@ var race_label: Label
 var race_bar: ProgressBar
 var finish_overlay: ColorRect
 var finish_button: Button
+var countdown_label: Label
+var timer_label: Label
+var position_label: Label
+var checkpoint_label: Label
+var result_time_label: Label
 var ambience_player: AudioStreamPlayer3D
 var race_finished := false
+var race_started := false
+var race_elapsed := 0.0
+var countdown_time := 3.0
+var current_checkpoint := 0
+var total_checkpoints := 3
+var lap := 1
+var total_laps := 1
 var race_start_z := 15.0
 var finish_z := -66.0
 
@@ -26,6 +38,7 @@ func _ready() -> void:
     _build_health_hud()
     _build_race_system()
     _build_game_over_ui()
+    _start_race_countdown()
 
     var car := get_node_or_null("PlayerCar")
     if car:
@@ -674,9 +687,40 @@ func _add_barrel(position: Vector3) -> void:
     collision.shape = shape
     obstacle.add_child(collision)
 
+func _start_race_countdown() -> void:
+    countdown_label = Label.new()
+    countdown_label.name = "Countdown"
+    countdown_label.set_anchors_preset(Control.PRESET_CENTER)
+    countdown_label.position = Vector2(-180.0, -120.0)
+    countdown_label.size = Vector2(360.0, 120.0)
+    countdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    countdown_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+    countdown_label.add_theme_font_size_override("font_size", 72)
+    countdown_label.text = "3"
+    var canvas := get_node_or_null("RaceHUD") as CanvasLayer
+    if canvas:
+        canvas.add_child(countdown_label)
+    _countdown_step()
+
+func _countdown_step() -> void:
+    if not is_instance_valid(countdown_label):
+        return
+    var value := int(ceil(countdown_time))
+    if value > 0:
+        countdown_label.text = str(value)
+        countdown_time -= 1.0
+        get_tree().create_timer(1.0).timeout.connect(_countdown_step)
+    else:
+        countdown_label.text = "GO!"
+        race_started = true
+        var tween := create_tween()
+        tween.tween_property(countdown_label, "modulate:a", 0.0, 0.6)
+        tween.finished.connect(countdown_label.queue_free)
+
 func _build_race_system() -> void:
     _add_finish_line()
-    
+    _add_race_checkpoints()
+
     var canvas := CanvasLayer.new()
     canvas.name = "RaceHUD"
     add_child(canvas)
@@ -697,13 +741,61 @@ func _build_race_system() -> void:
     race_bar.show_percentage = false
     canvas.add_child(race_bar)
 
-    var checkpoint_label := Label.new()
+    checkpoint_label = Label.new()
     checkpoint_label.name = "CheckpointInfo"
     checkpoint_label.position = Vector2(28.0, 184.0)
     checkpoint_label.size = Vector2(330.0, 30.0)
     checkpoint_label.text = "FINISH: 81m"
     checkpoint_label.add_theme_font_size_override("font_size", 16)
     canvas.add_child(checkpoint_label)
+
+    timer_label = Label.new()
+    timer_label.position = Vector2(28.0, 218.0)
+    timer_label.size = Vector2(330.0, 30.0)
+    timer_label.text = "TIME 00:00.00"
+    timer_label.add_theme_font_size_override("font_size", 18)
+    canvas.add_child(timer_label)
+
+    position_label = Label.new()
+    position_label.position = Vector2(28.0, 250.0)
+    position_label.size = Vector2(330.0, 30.0)
+    position_label.text = "POSITION 1 / 1"
+    position_label.add_theme_font_size_override("font_size", 18)
+    canvas.add_child(position_label)
+
+    var lap_label := Label.new()
+    lap_label.name = "LapInfo"
+    lap_label.position = Vector2(28.0, 282.0)
+    lap_label.size = Vector2(330.0, 30.0)
+    lap_label.text = "LAP 1 / 1"
+    lap_label.add_theme_font_size_override("font_size", 18)
+    canvas.add_child(lap_label)
+
+func _add_race_checkpoints() -> void:
+    var checkpoint_positions := [Vector3(0.0, 1.0, -8.0), Vector3(5.0, 1.0, -30.0), Vector3(9.5, 1.4, -51.0)]
+    for i in range(checkpoint_positions.size()):
+        var checkpoint := Area3D.new()
+        checkpoint.name = "Checkpoint%d" % (i + 1)
+        checkpoint.position = checkpoint_positions[i]
+        var collision := CollisionShape3D.new()
+        var shape := BoxShape3D.new()
+        shape.size = Vector3(11.5, 2.2, 1.2)
+        collision.shape = shape
+        checkpoint.add_child(collision)
+        checkpoint.body_entered.connect(_on_checkpoint_body_entered.bind(i))
+        add_child(checkpoint)
+
+func _on_checkpoint_body_entered(body: Node3D, index: int) -> void:
+    if not race_started or race_finished or body.name != "PlayerCar" or index != current_checkpoint:
+        return
+    current_checkpoint += 1
+    if is_instance_valid(checkpoint_label):
+        checkpoint_label.text = "CHECKPOINT %d / %d" % [current_checkpoint, total_checkpoints] if current_checkpoint < total_checkpoints else "CHECKPOINTS COMPLETE"
+
+func _format_race_time(value: float) -> String:
+    var minutes := int(value / 60.0)
+    var seconds := fmod(value, 60.0)
+    return "%02d:%05.2f" % [minutes, seconds]
 
 func _add_finish_line() -> void:
     var finish := Area3D.new()
@@ -763,13 +855,23 @@ func _add_finish_line() -> void:
 
     finish.body_entered.connect(_on_finish_body_entered)
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
     if race_finished:
         return
 
     var car := get_node_or_null("PlayerCar")
     if not car:
         return
+
+    if race_started:
+        race_elapsed += delta
+    if is_instance_valid(timer_label):
+        timer_label.text = "TIME " + _format_race_time(race_elapsed)
+    if is_instance_valid(position_label):
+        position_label.text = "POSITION 1 / 1"
+    var lap_label := get_node_or_null("RaceHUD/LapInfo") as Label
+    if is_instance_valid(lap_label):
+        lap_label.text = "LAP %d / %d" % [lap, total_laps]
 
     var distance_total := abs(finish_z - race_start_z)
     var distance_done := clamp(abs(race_start_z - car.global_position.z), 0.0, distance_total)
@@ -784,6 +886,10 @@ func _process(_delta: float) -> void:
 
 func _on_finish_body_entered(body: Node3D) -> void:
     if race_finished or body.name != "PlayerCar":
+        return
+    if not race_started or current_checkpoint < total_checkpoints:
+        if is_instance_valid(checkpoint_label):
+            checkpoint_label.text = "PASS CHECKPOINTS FIRST"
         return
     race_finished = true
     var car := get_node_or_null("PlayerCar")
@@ -817,9 +923,18 @@ func _show_finish_overlay() -> void:
 
     var message := Label.new()
     message.text = "You reached the finish line!"
+
+    result_time_label = Label.new()
+    result_time_label.text = "TIME  " + _format_race_time(race_elapsed)
+    result_time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    result_time_label.set_anchors_preset(Control.PRESET_CENTER)
+    result_time_label.position = Vector2(-320.0, 5.0)
+    result_time_label.size = Vector2(640.0, 45.0)
+    result_time_label.add_theme_font_size_override("font_size", 28)
+    finish_overlay.add_child(result_time_label)
     message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     message.set_anchors_preset(Control.PRESET_CENTER)
-    message.position = Vector2(-320.0, -35.0)
+    message.position = Vector2(-320.0, -48.0)
     message.size = Vector2(640.0, 50.0)
     message.add_theme_font_size_override("font_size", 24)
     finish_overlay.add_child(message)
