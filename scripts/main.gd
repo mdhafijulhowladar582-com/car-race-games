@@ -99,13 +99,11 @@ func _ready() -> void:
     _load_progress()
     _load_settings()
     _build_environment()
-    _build_road()
     _build_professional_track()
     _build_environment_scenery()
     _build_professional_environment()
     _build_premium_environment()
     _build_high_quality_environment()
-    _build_scenery()
     _build_ambience_audio()
     _build_music_system()
     _build_mobile_controls()
@@ -685,6 +683,17 @@ func _make_pbr_material(base_color: Color, roughness_value: float, metallic_valu
             image.set_pixel(x, y, Color(base_color.r * variation, base_color.g * variation, base_color.b * variation, 1.0))
     material.albedo_texture = ImageTexture.create_from_image(image)
     return material
+func _make_material(color: Color, metallic: float, roughness: float) -> StandardMaterial3D:
+    var material := _make_pbr_material(color, roughness, metallic, 2.5, 401)
+    return material
+
+func _make_emission_material(color: Color, energy: float) -> StandardMaterial3D:
+    var material := _make_material(color, 0.1, 0.12)
+    material.emission_enabled = true
+    material.emission = color
+    material.emission_energy_multiplier = energy
+    return material
+
 func _build_high_quality_environment() -> void:
     var terrain := _make_pbr_material(Color(0.035, 0.11, 0.045), 0.98, 0.0, 3.0, 101)
     var terrain_edge := _make_material(Color(0.07, 0.18, 0.08), 0.0, 0.92)
@@ -1040,18 +1049,22 @@ func _refresh_customization_label() -> void:
 
 func _select_car(car_name: String) -> void:
     selected_car = car_name
-    if car_name == "MUSCLE":
-        car_label.text = "CAR: MUSCLE\nSpeed 30 | Acceleration 20 | Handling 1.8"
-    elif car_name == "GT":
-        car_label.text = "CAR: GT\nSpeed 38 | Acceleration 16 | Handling 2.4"
-    elif car_name == "SUPERCAR":
-        car_label.text = "CAR: SUPERCAR\nSpeed 42 | Acceleration 19 | Handling 2.6"
-    elif car_name == "HYPER":
-        car_label.text = "CAR: HYPER\nSpeed 46 | Acceleration 17.5 | Handling 2.8"
-    elif car_name == "RALLY":
-        car_label.text = "CAR: RALLY\nSpeed 32 | Acceleration 22 | Handling 2.15"
-    else:
-        car_label.text = "CAR: SPORTS\nSpeed 34 | Acceleration 18 | Handling 2.2"
+    _update_car_selection_visuals()
+    _save_progress()
+
+func _update_car_selection_visuals() -> void:
+    if not is_instance_valid(car_label):
+        return
+    car_label.text = "CAR: %s\nSpeed %d | Acceleration %d | Handling %.2f | Upgrade %d/3" % [selected_car, _garage_speed(), _garage_accel(), _garage_handling(), upgrade_level]
+    if is_instance_valid(customization_label):
+        customization_label.text = "COLOR: %s   WHEELS: %s   UPGRADE: %d/3" % [_color_name(), selected_wheels, upgrade_level]
+
+func _color_name() -> String:
+    if selected_color.r > selected_color.b * 1.6:
+        return "RED"
+    if selected_color.b > selected_color.r * 1.3:
+        return "BLUE"
+    return "GREEN"
 
 func _build_map_select() -> void:
     var panel := Panel.new()
@@ -1174,13 +1187,6 @@ func _on_leaderboard_request_completed(result: int, response_code: int, _headers
         if leaderboard_entries.size() > 10:
             leaderboard_entries.resize(10)
     online_leaderboard_status = "ONLINE"
-
-func _update_leaderboard() -> void:
-    var entry := {"time": race_elapsed, "mode": selected_mode, "map": selected_map, "weather": selected_weather}
-    leaderboard_entries.append(entry)
-    leaderboard_entries.sort_custom(func(a, b): return float(a.get("time", 999999.0)) < float(b.get("time", 999999.0)))
-    if leaderboard_entries.size() > 10:
-        leaderboard_entries.resize(10)
 
 func _open_leaderboard() -> void:
     leaderboard_overlay = ColorRect.new()
