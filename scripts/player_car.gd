@@ -568,6 +568,7 @@ func _build_car() -> void:
         body.name = "Body"
     _add_cabin(car_root)
     _add_details(car_root)
+    _add_premium_body_details(car_root)
     _add_lights(car_root)
     _add_spoiler(car_root)
     _add_wheels()
@@ -667,6 +668,63 @@ func _add_details(parent: Node3D) -> void:
     diffuser.material_override = _material(Color(0.01, 0.01, 0.015), 0.75, 0.18)
     parent.add_child(diffuser)
 
+
+func _add_premium_body_details(parent: Node3D) -> void:
+    var front_bumper := MeshInstance3D.new()
+    var bumper_mesh := BoxMesh.new()
+    bumper_mesh.size = Vector3(2.18, 0.32, 0.34)
+    front_bumper.mesh = bumper_mesh
+    front_bumper.position = Vector3(0.0, 0.02, -1.92)
+    front_bumper.material_override = _material(customization_color, 0.65, 0.16)
+    parent.add_child(front_bumper)
+
+    for x in [-0.72, 0.72]:
+        var intake := MeshInstance3D.new()
+        var intake_mesh := BoxMesh.new()
+        intake_mesh.size = Vector3(0.38, 0.22, 0.09)
+        intake.mesh = intake_mesh
+        intake.position = Vector3(x, 0.0, -2.095)
+        intake.material_override = _material(Color(0.006, 0.008, 0.012), 0.2, 0.65)
+        parent.add_child(intake)
+
+    var hood_scoop := MeshInstance3D.new()
+    var scoop_mesh := BoxMesh.new()
+    scoop_mesh.size = Vector3(0.58, 0.12, 0.48)
+    hood_scoop.mesh = scoop_mesh
+    hood_scoop.position = Vector3(0.0, 0.53, -1.02)
+    hood_scoop.rotation_degrees = Vector3(-5.0, 0.0, 0.0)
+    hood_scoop.material_override = _material(Color(0.025, 0.025, 0.03), 0.72, 0.16)
+    parent.add_child(hood_scoop)
+
+    for x in [-0.92, 0.92]:
+        var side_intake := MeshInstance3D.new()
+        var intake_mesh := BoxMesh.new()
+        intake_mesh.size = Vector3(0.10, 0.30, 0.62)
+        side_intake.mesh = intake_mesh
+        side_intake.position = Vector3(x, 0.05, 0.25)
+        side_intake.material_override = _material(Color(0.008, 0.009, 0.012), 0.35, 0.58)
+        parent.add_child(side_intake)
+
+    for x in [-0.62, 0.62]:
+        var exhaust := MeshInstance3D.new()
+        var exhaust_mesh := CylinderMesh.new()
+        exhaust_mesh.top_radius = 0.095
+        exhaust_mesh.bottom_radius = 0.095
+        exhaust_mesh.height = 0.16
+        exhaust.mesh = exhaust_mesh
+        exhaust.rotation_degrees = Vector3(90.0, 0.0, 0.0)
+        exhaust.position = Vector3(x, -0.16, 2.14)
+        exhaust.material_override = _material(Color(0.22, 0.23, 0.25), 0.88, 0.14)
+        parent.add_child(exhaust)
+
+    var roof_glass := MeshInstance3D.new()
+    var glass_mesh := BoxMesh.new()
+    glass_mesh.size = Vector3(1.25, 0.035, 1.22)
+    roof_glass.mesh = glass_mesh
+    roof_glass.position = Vector3(0.0, 0.91, 0.42)
+    roof_glass.material_override = _material(Color(0.01, 0.035, 0.055), 0.3, 0.05)
+    parent.add_child(roof_glass)
+
 func _add_lights(parent: Node3D) -> void:
     for x in [-0.68, 0.68]:
         var headlight := MeshInstance3D.new()
@@ -733,6 +791,16 @@ func _add_wheel(pos: Vector3) -> void:
     rim.add_to_group("car_rim")
     rim.material_override = _material(Color(0.42, 0.44, 0.48), 0.9, 0.18)
     wheel_root.add_child(rim)
+
+    var brake_disc := MeshInstance3D.new()
+    var disc_mesh := CylinderMesh.new()
+    disc_mesh.top_radius = 0.16
+    disc_mesh.bottom_radius = 0.16
+    disc_mesh.height = 0.035
+    brake_disc.mesh = disc_mesh
+    brake_disc.rotation_degrees = Vector3(0.0, 0.0, 90.0)
+    brake_disc.material_override = _material(Color(0.16, 0.17, 0.18), 0.92, 0.2)
+    wheel_root.add_child(brake_disc)
 
     var hub := MeshInstance3D.new()
     var hub_mesh := CylinderMesh.new()
