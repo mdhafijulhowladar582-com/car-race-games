@@ -81,6 +81,7 @@ func _ready() -> void:
     _build_environment_scenery()
     _build_professional_environment()
     _build_premium_environment()
+    _build_high_quality_environment()
     _build_scenery()
     _build_ambience_audio()
     _build_mobile_controls()
@@ -534,6 +535,157 @@ func _add_premium_sign(position: Vector3, text_value: String, material: Standard
     board.position.y = 3.15
     board.material_override = material
     sign.add_child(board)
+
+func _build_high_quality_environment() -> void:
+    var terrain := _make_material(Color(0.035, 0.11, 0.045), 0.0, 1.0)
+    var terrain_edge := _make_material(Color(0.07, 0.18, 0.08), 0.0, 0.92)
+    var foliage := _make_material(Color(0.025, 0.14, 0.055), 0.0, 0.9)
+    var foliage_light := _make_material(Color(0.08, 0.28, 0.11), 0.0, 0.86)
+    var concrete := _make_material(Color(0.16, 0.18, 0.2), 0.2, 0.72)
+    var glass := _make_emission_material(Color(0.08, 0.3, 0.58), 0.9)
+    var metal := _make_material(Color(0.22, 0.24, 0.27), 0.75, 0.34)
+    var accent := _make_emission_material(Color(0.95, 0.18, 0.035), 0.65)
+
+    _add_environment_terrain_layer(Vector3(4.0, -0.18, -27.0), Vector3(92.0, 0.28, 122.0), terrain)
+    _add_environment_terrain_layer(Vector3(4.0, 0.02, -27.0), Vector3(78.0, 0.12, 112.0), terrain_edge)
+
+    for i in range(18):
+        var z := 13.0 - float(i) * 5.1
+        var side := -1.0 if i % 2 == 0 else 1.0
+        _add_high_quality_tree(Vector3(-11.5 + side * 0.8, 0.0, z), foliage, foliage_light, 1.0 + float(i % 4) * 0.08)
+        _add_high_quality_tree(Vector3(16.0 - side * 0.7, 0.0, z - 2.2), foliage, foliage_light, 0.9 + float((i + 1) % 4) * 0.09)
+
+    for i in range(8):
+        var z := 8.0 - float(i) * 9.0
+        _add_roadside_barrier(Vector3(-7.1, 0.35, z), 0.0, metal)
+        if i % 2 == 0:
+            _add_roadside_barrier(Vector3(13.0, 0.55, z - 3.0), 0.0, metal)
+
+    var skyline := [
+        [Vector3(-22.0, 5.0, -8.0), Vector3(6.0, 10.0, 6.0)],
+        [Vector3(23.0, 7.0, -22.0), Vector3(7.0, 14.0, 7.0)],
+        [Vector3(-23.0, 8.0, -39.0), Vector3(8.0, 16.0, 8.0)],
+        [Vector3(24.0, 6.0, -57.0), Vector3(7.0, 12.0, 7.0)]
+    ]
+    for item in skyline:
+        _add_high_quality_building(item[0], item[1], concrete, glass)
+
+    _add_environment_banner(Vector3(0.0, 5.0, -9.0), "NOVA RACING")
+    _add_environment_banner(Vector3(7.0, 5.4, -49.0), "SPEED ZONE")
+
+    for position in [Vector3(-9.0, 0.0, 9.0), Vector3(12.0, 0.1, -6.0), Vector3(-10.0, 0.1, -31.0), Vector3(14.0, 0.2, -52.0)]:
+        _add_rock_cluster(position, terrain_edge)
+
+    var accent_positions := [Vector3(-6.5, 1.1, 1.0), Vector3(11.5, 1.3, -27.0), Vector3(-9.0, 1.5, -45.0)]
+    for position in accent_positions:
+        _add_premium_sign(position + Vector3(0.0, 2.8, 0.0), "RACE", accent)
+
+func _add_environment_terrain_layer(position: Vector3, size: Vector3, material: StandardMaterial3D) -> void:
+    var mesh_instance := MeshInstance3D.new()
+    var mesh := BoxMesh.new()
+    mesh.size = size
+    mesh_instance.mesh = mesh
+    mesh_instance.position = position
+    mesh_instance.material_override = material
+    add_child(mesh_instance)
+
+func _add_high_quality_tree(position: Vector3, leaf_material: StandardMaterial3D, light_material: StandardMaterial3D, scale_value: float) -> void:
+    var root := Node3D.new()
+    root.position = position
+    root.scale = Vector3.ONE * scale_value
+    add_child(root)
+
+    var trunk := MeshInstance3D.new()
+    var trunk_mesh := CylinderMesh.new()
+    trunk_mesh.top_radius = 0.11
+    trunk_mesh.bottom_radius = 0.22
+    trunk_mesh.height = 3.4
+    trunk.mesh = trunk_mesh
+    trunk.position.y = 1.7
+    trunk.material_override = _make_material(Color(0.16, 0.07, 0.025), 0.0, 1.0)
+    root.add_child(trunk)
+
+    for data in [
+        [Vector3(0.0, 3.15, 0.0), 1.25, 2.4],
+        [Vector3(-0.75, 2.65, 0.15), 0.95, 1.9],
+        [Vector3(0.72, 2.55, -0.12), 0.9, 1.8]
+    ]:
+        var crown := MeshInstance3D.new()
+        var crown_mesh := SphereMesh.new()
+        crown_mesh.radius = data[1]
+        crown_mesh.height = data[2]
+        crown.mesh = crown_mesh
+        crown.position = data[0]
+        crown.material_override = light_material if data[0].x != 0.0 else leaf_material
+        root.add_child(crown)
+
+func _add_roadside_barrier(position: Vector3, rotation_y: float, material: StandardMaterial3D) -> void:
+    var root := Node3D.new()
+    root.position = position
+    root.rotation_degrees.y = rotation_y
+    add_child(root)
+
+    for x in [-1.8, 0.0, 1.8]:
+        var post := MeshInstance3D.new()
+        var post_mesh := CylinderMesh.new()
+        post_mesh.top_radius = 0.06
+        post_mesh.bottom_radius = 0.08
+        post_mesh.height = 0.8
+        post.mesh = post_mesh
+        post.position = Vector3(x, 0.4, 0.0)
+        post.material_override = material
+        root.add_child(post)
+
+    var rail := MeshInstance3D.new()
+    var rail_mesh := BoxMesh.new()
+    rail_mesh.size = Vector3(4.0, 0.16, 0.16)
+    rail.mesh = rail_mesh
+    rail.position.y = 0.65
+    rail.material_override = material
+    root.add_child(rail)
+
+func _add_high_quality_building(position: Vector3, size: Vector3, body_material: StandardMaterial3D, glass_material: StandardMaterial3D) -> void:
+    var root := Node3D.new()
+    root.position = position
+    add_child(root)
+
+    var body := MeshInstance3D.new()
+    var body_mesh := BoxMesh.new()
+    body_mesh.size = size
+    body.mesh = body_mesh
+    body.material_override = body_material
+    root.add_child(body)
+
+    var roof := MeshInstance3D.new()
+    var roof_mesh := BoxMesh.new()
+    roof_mesh.size = Vector3(size.x * 1.08, 0.28, size.z * 1.08)
+    roof.mesh = roof_mesh
+    roof.position.y = size.y * 0.5 + 0.14
+    roof.material_override = _make_material(Color(0.06, 0.07, 0.09), 0.45, 0.42)
+    root.add_child(roof)
+
+    var floors := max(3, int(size.y / 1.8))
+    for y in range(floors):
+        for side in [-1.0, 1.0]:
+            var window := MeshInstance3D.new()
+            var window_mesh := BoxMesh.new()
+            window_mesh.size = Vector3(size.x * 0.7, 0.48, 0.07)
+            window.mesh = window_mesh
+            window.position = Vector3(0.0, -size.y * 0.5 + 1.15 + y * 1.65, side * size.z * 0.505)
+            window.material_override = glass_material
+            root.add_child(window)
+
+func _add_rock_cluster(position: Vector3, material: StandardMaterial3D) -> void:
+    for i in range(3):
+        var rock := MeshInstance3D.new()
+        var mesh := SphereMesh.new()
+        mesh.radius = 0.6 + float(i) * 0.18
+        mesh.height = 0.8 + float(i) * 0.2
+        rock.mesh = mesh
+        rock.position = position + Vector3(float(i) * 0.55, 0.35 + float(i % 2) * 0.12, float(i % 2) * 0.5)
+        rock.scale = Vector3(1.2, 0.8, 1.0)
+        rock.material_override = material
+        add_child(rock)
 
 func _build_professional_track() -> void:
     track_path = [
