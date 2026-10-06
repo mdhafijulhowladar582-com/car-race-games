@@ -82,6 +82,7 @@ var career_wins := 0
 var career_races := 0
 var career_stars := 0
 var career_reward_multiplier := 1.0
+var achievements_overlay: ColorRect
 
 var race_start_z := 15.0
 var finish_z := -66.0
@@ -2078,6 +2079,13 @@ func _build_rewards_hud() -> void:
     coins_label.add_theme_font_size_override("font_size", 22)
     canvas.add_child(coins_label)
 
+    var achievements_button := Button.new()
+    achievements_button.text = "🏅 ACHIEVEMENTS"
+    achievements_button.position = Vector2(28.0, 158.0)
+    achievements_button.size = Vector2(220.0, 42.0)
+    achievements_button.pressed.connect(_open_achievements)
+    canvas.add_child(achievements_button)
+
 func _update_rewards_hud() -> void:
     if is_instance_valid(coins_label):
         coins_label.text = "COINS %d   XP %d" % [coins, xp]
@@ -2119,13 +2127,103 @@ func _grant_race_rewards() -> void:
             career_reward_multiplier = 1.0 + float(career_level - 1) * 0.15
     if best_time <= 0.0 or race_elapsed < best_time:
         best_time = race_elapsed
-    if total_races >= 1 and not achievements.has("FIRST_RACE"):
-        achievements.append("FIRST_RACE")
-    if coins >= 500 and not achievements.has("500_COINS"):
-        achievements.append("500_COINS")
+    _check_achievements()
     _update_leaderboard()
     _save_progress()
     _update_rewards_hud()
+
+func _check_achievements() -> void:
+    var unlocked := false
+    if total_races >= 1 and not achievements.has("FIRST_RACE"):
+        achievements.append("FIRST_RACE")
+        unlocked = true
+    if total_races >= 5 and not achievements.has("FIVE_RACES"):
+        achievements.append("FIVE_RACES")
+        unlocked = true
+    if coins >= 500 and not achievements.has("500_COINS"):
+        achievements.append("500_COINS")
+        unlocked = true
+    if coins >= 1000 and not achievements.has("1000_COINS"):
+        achievements.append("1000_COINS")
+        unlocked = true
+    if upgrade_level >= 3 and not achievements.has("MAX_UPGRADE"):
+        achievements.append("MAX_UPGRADE")
+        unlocked = true
+    if career_level >= 3 and not achievements.has("CAREER_LEVEL_3"):
+        achievements.append("CAREER_LEVEL_3")
+        unlocked = true
+    if career_stars >= 10 and not achievements.has("TEN_CAREER_STARS"):
+        achievements.append("TEN_CAREER_STARS")
+        unlocked = true
+    if selected_map == "HIGHWAY" and not achievements.has("HIGHWAY_RACER"):
+        achievements.append("HIGHWAY_RACER")
+        unlocked = true
+    if selected_map == "DESERT" and not achievements.has("DESERT_RACER"):
+        achievements.append("DESERT_RACER")
+        unlocked = true
+    if selected_weather == "RAIN" and not achievements.has("RAIN_RACER"):
+        achievements.append("RAIN_RACER")
+        unlocked = true
+    if unlocked:
+        _update_rewards_hud()
+
+func _open_achievements() -> void:
+    if is_instance_valid(achievements_overlay):
+        achievements_overlay.queue_free()
+
+    achievements_overlay = ColorRect.new()
+    achievements_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    achievements_overlay.color = Color(0.01, 0.01, 0.02, 0.9)
+    achievements_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+
+    var canvas := CanvasLayer.new()
+    canvas.name = "AchievementsUI"
+    canvas.layer = 35
+    add_child(canvas)
+    canvas.add_child(achievements_overlay)
+
+    var title := Label.new()
+    title.text = "🏅 ACHIEVEMENTS  %d/10" % achievements.size()
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title.position = Vector2(0.0, 70.0)
+    title.size = Vector2(1280.0, 60.0)
+    title.add_theme_font_size_override("font_size", 38)
+    achievements_overlay.add_child(title)
+
+    var definitions := [
+        ["FIRST_RACE", "First Race", "Complete your first race"],
+        ["FIVE_RACES", "Race Veteran", "Complete 5 races"],
+        ["500_COINS", "Coin Collector", "Earn 500 coins"],
+        ["1000_COINS", "Coin Master", "Earn 1000 coins"],
+        ["MAX_UPGRADE", "Fully Tuned", "Reach upgrade level 3"],
+        ["CAREER_LEVEL_3", "Career Star", "Reach career level 3"],
+        ["TEN_CAREER_STARS", "Star Driver", "Earn 10 career stars"],
+        ["HIGHWAY_RACER", "Highway Racer", "Race on Highway"],
+        ["DESERT_RACER", "Desert Racer", "Race in Desert"],
+        ["RAIN_RACER", "Rain Driver", "Race in Rain"]
+    ]
+
+    var list := Label.new()
+    var lines := []
+    for item in definitions:
+        var state := "✅" if achievements.has(item[0]) else "🔒"
+        lines.append("%s  %s — %s" % [state, item[1], item[2]])
+    list.text = "\n\n".join(lines)
+    list.position = Vector2(180.0, 165.0)
+    list.size = Vector2(920.0, 440.0)
+    list.add_theme_font_size_override("font_size", 24)
+    achievements_overlay.add_child(list)
+
+    var close := Button.new()
+    close.text = "CLOSE"
+    close.position = Vector2(510.0, 625.0)
+    close.size = Vector2(260.0, 55.0)
+    close.pressed.connect(func():
+        if is_instance_valid(achievements_overlay):
+            achievements_overlay.queue_free()
+            achievements_overlay = null
+    )
+    achievements_overlay.add_child(close)
 
 func _save_progress() -> void:
     var data := {
