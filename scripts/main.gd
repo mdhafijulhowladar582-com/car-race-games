@@ -146,6 +146,9 @@ func _save_progress() -> void:
     if file:
         file.store_string(JSON.stringify(data))
 
+func _apply_master_volume() -> void:
+    AudioServer.set_bus_volume_db(0, linear_to_db(maxf(master_volume, 0.001)))
+
 func _load_settings() -> void:
     var file := FileAccess.open(settings_path, FileAccess.READ)
     if file == null:
@@ -163,6 +166,7 @@ func _load_settings() -> void:
         steering_sensitivity = float(data["steering_sensitivity"])
     if data.has("vibration_enabled"):
         vibration_enabled = bool(data["vibration_enabled"])
+    _apply_master_volume()
 
 func _ready() -> void:
     _load_progress()
@@ -952,7 +956,7 @@ func _on_sensitivity_changed(value: float) -> void:
 
 func _on_master_volume_changed(value: float) -> void:
     master_volume = value
-    AudioServer.set_bus_volume_db(0, linear_to_db(maxf(master_volume, 0.001)))
+    _apply_master_volume()
     _save_settings()
     _update_settings_label()
 
