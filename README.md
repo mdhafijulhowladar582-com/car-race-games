@@ -32,6 +32,15 @@ Godot 4.x 3D car racing game for Android and PC.
 - Android APK/AAB export still requires a Godot installation with Android export templates and the Android SDK/JDK
 - Release builds additionally require Android signing configuration
 
+## Camera System
+
+- Speed-based dynamic FOV for a stronger sense of acceleration
+- Smooth follow offset that changes with vehicle speed
+- Steering/drift camera lean for more responsive driving feedback
+- Lightweight collision camera shake
+- Finish-line cinematic camera pull-back and FOV transition
+- Camera effects are procedural and use no external assets
+
 ## Professional Audio
 
 - Layered low/high procedural engine audio with speed and throttle response
