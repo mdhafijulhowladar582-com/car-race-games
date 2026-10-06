@@ -179,7 +179,7 @@ func load_public_leaderboard() -> void:
         leaderboard_failed.emit("Firebase HTTP service is not ready.")
         return
 
-    var url := FIRESTORE_BASE_URL + LEADERBOARD_PATH
+    var url := FIRESTORE_BASE_URL + LEADERBOARD_PATH + "?pageSize=100"
     var headers := PackedStringArray(["Accept: application/json"])
     if not id_token.is_empty():
         headers.append("Authorization: Bearer " + id_token)
