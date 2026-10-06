@@ -91,6 +91,7 @@ var auth_status_label: Label
 var firebase_auth_status := "GUEST"
 var firebase_display_name := ""
 var global_rank := 0
+var global_rank := 0
 var career_level := 1
 var career_wins := 0
 var career_races := 0
@@ -1043,6 +1044,8 @@ func _setup_firebase_service() -> void:
     firebase_service.score_failed.connect(_on_firebase_score_failed)
     firebase_service.rank_loaded.connect(_on_firebase_rank_loaded)
     firebase_service.rank_failed.connect(_on_firebase_rank_failed)
+    firebase_service.rank_loaded.connect(_on_firebase_rank_loaded)
+    firebase_service.rank_failed.connect(_on_firebase_rank_failed)
     online_leaderboard_status = "CONNECTING"
     firebase_service.continue_as_guest()
     firebase_service.load_public_leaderboard()
@@ -1095,9 +1098,12 @@ func _refresh_leaderboard() -> void:
             text_lines.append("%02d. %s — %s" % [i + 1, str(entry.get("name", "PLAYER")), _format_race_time(_leaderboard_time_value(entry))])
 
     var rank := global_rank if global_rank > 0 else _get_own_rank(sorted_entries)
-    if rank > 0:
+    if global_rank > 0:
         text_lines.append("")
-        text_lines.append("YOUR RANK: #%d" % rank)
+        text_lines.append("GLOBAL RANK: #%d" % global_rank)
+    elif rank > 0:
+        text_lines.append("")
+        text_lines.append("LOCAL TOP-100 RANK: #%d" % rank)
     elif firebase_auth_status == "SIGNED_IN":
         text_lines.append("")
         text_lines.append("YOUR RANK: Not ranked yet")
@@ -1171,6 +1177,16 @@ func _on_firebase_rank_loaded(rank: int) -> void:
         _refresh_leaderboard()
 
 func _on_firebase_rank_failed(_message: String) -> void:
+    global_rank = 0
+    if leaderboard_label and is_instance_valid(leaderboard_label):
+        _refresh_leaderboard()
+
+func _on_firebase_rank_loaded(rank: int) -> void:
+    global_rank = rank
+    if leaderboard_label and is_instance_valid(leaderboard_label):
+        _refresh_leaderboard()
+
+func _on_firebase_rank_failed(message: String) -> void:
     global_rank = 0
     if leaderboard_label and is_instance_valid(leaderboard_label):
         _refresh_leaderboard()
