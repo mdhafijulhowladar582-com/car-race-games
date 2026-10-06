@@ -87,6 +87,11 @@ public class GodotAndroidPlugin extends GodotPlugin {
             return;
         }
 
+        if (resultCode != Activity.RESULT_OK) {
+            emitSignal("google_sign_in_failed", "Google Sign-In was cancelled.");
+            return;
+        }
+
         if (data == null) {
             emitSignal("google_sign_in_failed", "Google Sign-In returned no result.");
             return;
@@ -109,6 +114,8 @@ public class GodotAndroidPlugin extends GodotPlugin {
             );
         } catch (ApiException exception) {
             emitSignal("google_sign_in_failed", "Google Sign-In failed: " + exception.getStatusCode());
+        } catch (Exception exception) {
+            emitSignal("google_sign_in_failed", "Google Sign-In returned an invalid account.");
         }
     }
 }
