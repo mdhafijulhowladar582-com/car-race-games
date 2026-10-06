@@ -85,6 +85,7 @@ var career_stars := 0
 var career_reward_multiplier := 1.0
 var achievements_overlay: ColorRect
 var loading_overlay: ColorRect
+var results_canvas: CanvasLayer
 
 var race_start_z := 15.0
 var finish_z := -66.0
@@ -2020,17 +2021,18 @@ func _show_finish_overlay() -> void:
 
     finish_overlay = ColorRect.new()
     finish_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    finish_overlay.color = Color(0.0, 0.0, 0.0, 0.72)
+    finish_overlay.color = Color(0.005, 0.008, 0.015, 0.94)
     finish_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 
     var canvas := CanvasLayer.new()
-    canvas.name = "FinishUI"
+    canvas.name = "ResultsUI"
     canvas.layer = 30
+    results_canvas = canvas
     add_child(canvas)
     canvas.add_child(finish_overlay)
 
     var title := Label.new()
-    title.text = "🏁 RACE FINISHED!"
+    title.text = "🏆 RACE RESULTS"
     title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     title.set_anchors_preset(Control.PRESET_CENTER)
     title.position = Vector2(-320.0, -140.0)
@@ -2039,10 +2041,13 @@ func _show_finish_overlay() -> void:
     finish_overlay.add_child(title)
 
     var message := Label.new()
-    message.text = "MODE: %s" % mode_name
+    var position := _get_player_position_rank()
+    var reward := _calculate_race_reward()
+    var is_new_best := best_time > 0.0 and race_elapsed <= best_time
+    message.text = "%s  •  %s  •  %s" % [mode_name, selected_map, selected_weather]
 
     result_time_label = Label.new()
-    result_time_label.text = "TIME  " + _format_race_time(race_elapsed) + "\nPOSITION  " + str(_get_player_position_rank()) + " / " + str(ai_opponents.size() + 1) + "\nREWARD  +" + str(_calculate_race_reward()[0]) + " COINS   +" + str(_calculate_race_reward()[1]) + " XP"
+    result_time_label.text = "TIME  " + _format_race_time(race_elapsed) + "\nPOSITION  " + str(position) + " / " + str(ai_opponents.size() + 1) + "\nREWARD  +" + str(reward[0]) + " COINS   +" + str(reward[1]) + " XP\nBEST  " + _format_race_time(best_time) + ("\n⭐ NEW BEST!" if is_new_best else "")
     result_time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     result_time_label.set_anchors_preset(Control.PRESET_CENTER)
     result_time_label.position = Vector2(-320.0, 5.0)
@@ -2057,14 +2062,38 @@ func _show_finish_overlay() -> void:
     finish_overlay.add_child(message)
 
     finish_button = Button.new()
-    finish_button.text = "RACE AGAIN"
+    finish_button.text = "🏁 RACE AGAIN"
     finish_button.set_anchors_preset(Control.PRESET_CENTER)
-    finish_button.position = Vector2(-140.0, 55.0)
+    finish_button.position = Vector2(-300.0, 135.0)
     finish_button.size = Vector2(280.0, 80.0)
     finish_button.focus_mode = Control.FOCUS_NONE
     finish_button.add_theme_font_size_override("font_size", 28)
     finish_button.pressed.connect(_restart_game)
     finish_overlay.add_child(finish_button)
+
+    var menu_button := Button.new()
+    menu_button.text = "🏠 MAIN MENU"
+    menu_button.set_anchors_preset(Control.PRESET_CENTER)
+    menu_button.position = Vector2(20.0, 135.0)
+    menu_button.size = Vector2(280.0, 70.0)
+    menu_button.focus_mode = Control.FOCUS_NONE
+    menu_button.add_theme_font_size_override("font_size", 24)
+    menu_button.pressed.connect(_return_to_main_menu)
+    finish_overlay.add_child(menu_button)
+
+func _return_to_main_menu() -> void:
+    if is_instance_valid(results_canvas):
+        results_canvas.queue_free()
+        results_canvas = null
+    race_finished = false
+    race_started = false
+    race_elapsed = 0.0
+    countdown_time = 3.0
+    current_checkpoint = 0
+    lap = 1
+    if is_instance_valid(mobile_controls):
+        mobile_controls.visible = true
+    _build_mode_select()
 
 func _build_professional_mobile_hud() -> void:
     var canvas := CanvasLayer.new()
