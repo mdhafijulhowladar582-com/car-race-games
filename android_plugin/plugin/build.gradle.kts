@@ -28,7 +28,7 @@ android {
 }
 
 dependencies {
-    implementation("org.godotengine:godot:4.7.0.stable")
+    compileOnly("org.godotengine:godot:4.7.0.stable")
     compileOnly("com.google.android.gms:play-services-auth:21.4.0")
 }
 
