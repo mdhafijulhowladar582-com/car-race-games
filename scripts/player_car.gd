@@ -45,10 +45,32 @@ var camera_base_rotation := Vector3(-15.0, 180.0, 0.0)
 var camera_shake := 0.0
 var camera_shake_strength := 0.0
 var camera_cinematic := false
+var car_model := "SPORTS"
+var car_max_speed := 34.0
+var car_acceleration := 18.0
+var car_steering := 2.2
 
 signal health_changed(current_health: float, maximum_health: float)
 signal game_over
 signal crash_impact
+
+func configure_car(model_name: String) -> void:
+    car_model = model_name
+    if model_name == "MUSCLE":
+        car_max_speed = 30.0
+        car_acceleration = 20.0
+        car_steering = 1.8
+    elif model_name == "GT":
+        car_max_speed = 38.0
+        car_acceleration = 16.0
+        car_steering = 2.4
+    else:
+        car_max_speed = 34.0
+        car_acceleration = 18.0
+        car_steering = 2.2
+    max_speed = car_max_speed
+    acceleration = car_acceleration
+    steering_response = car_steering
 
 func _ready() -> void:
     health = max_health
@@ -477,6 +499,22 @@ func get_health_percent() -> float:
         return 0.0
     return health / max_health
 
+func _apply_car_style() -> void:
+    var body_root := get_node_or_null("CarVisual")
+    if not body_root:
+        return
+    var colors := {
+        "SPORTS": Color(0.82, 0.025, 0.02),
+        "MUSCLE": Color(0.04, 0.08, 0.72),
+        "GT": Color(0.04, 0.55, 0.18)
+    }
+    var body := body_root.get_node_or_null("Body") as MeshInstance3D
+    var hood := body_root.get_node_or_null("Hood") as MeshInstance3D
+    if body:
+        body.material_override = _material(colors.get(car_model, colors["SPORTS"]), 0.55, 0.2)
+    if hood:
+        hood.material_override = _material(colors.get(car_model, colors["SPORTS"]), 0.6, 0.18)
+
 func _build_car() -> void:
     var collision := get_node("CollisionShape3D") as CollisionShape3D
     var box := BoxShape3D.new()
@@ -491,11 +529,15 @@ func _build_car() -> void:
     add_child(car_root)
 
     _add_body(car_root)
+    var body := car_root.get_node_or_null("Body") as MeshInstance3D
+    if body:
+        body.name = "Body"
     _add_cabin(car_root)
     _add_details(car_root)
     _add_lights(car_root)
     _add_spoiler(car_root)
     _add_wheels()
+    _apply_car_style()
 
 func _add_body(parent: Node3D) -> void:
     var body := MeshInstance3D.new()
