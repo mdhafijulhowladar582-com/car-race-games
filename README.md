@@ -32,6 +32,16 @@ Godot 4.x 3D car racing game for Android and PC.
 - Android APK/AAB export still requires a Godot installation with Android export templates and the Android SDK/JDK
 - Release builds additionally require Android signing configuration
 
+## Better Effects
+
+- Lightweight procedural tire dust particles during hard braking and steering
+- Dynamic skid-mark visuals for braking and aggressive steering
+- Damage smoke activates automatically at low health
+- Collision sparks burst on strong impacts
+- Short collision flash effect for stronger impact feedback
+- Effects are generated at runtime with no external texture or VFX asset dependency
+- CPU-friendly particle counts are kept low for Android compatibility
+
 ## Race System
 
 - Race progress percentage HUD
