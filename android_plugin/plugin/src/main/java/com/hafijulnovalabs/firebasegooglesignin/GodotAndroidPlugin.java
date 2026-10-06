@@ -15,6 +15,8 @@ import org.godotengine.godot.plugin.GodotPlugin;
 import org.godotengine.godot.plugin.SignalInfo;
 import org.godotengine.godot.plugin.UsedByGodot;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Set;
 
 public class GodotAndroidPlugin extends GodotPlugin {
@@ -33,11 +35,11 @@ public class GodotAndroidPlugin extends GodotPlugin {
 
     @Override
     public Set<SignalInfo> getPluginSignals() {
-        return Set.of(
+        return new HashSet<>(Arrays.asList(
             new SignalInfo("google_sign_in_success", String.class, String.class, String.class),
             new SignalInfo("google_sign_in_failed", String.class),
             new SignalInfo("google_sign_out_complete")
-        );
+        ));
     }
 
     @UsedByGodot
