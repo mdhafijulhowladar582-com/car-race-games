@@ -97,6 +97,9 @@ var results_canvas: CanvasLayer
 var race_start_z := 15.0
 var finish_z := -66.0
 var track_path: Array[Vector3] = []
+var track_segment_lengths: Array[float] = []
+var track_total_length := 0.0
+var player_track_progress := 0.0
 var sun_light: DirectionalLight3D
 var sky_fill_light: DirectionalLight3D
 var lighting_tuning := 1.0
