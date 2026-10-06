@@ -79,6 +79,7 @@ func _ready() -> void:
     _build_road()
     _build_professional_track()
     _build_environment_scenery()
+    _build_premium_environment()
     _build_scenery()
     _build_ambience_audio()
     _build_mobile_controls()
@@ -325,6 +326,127 @@ func _add_sign(position: Vector3, rotation_y: float, text_value: String) -> void
     board.position.y = 2.35
     board.material_override = material
     sign_root.add_child(board)
+
+func _build_premium_environment() -> void:
+    var grass := _make_material(Color(0.055, 0.16, 0.065), 0.0, 0.98)
+    var dark_grass := _make_material(Color(0.035, 0.095, 0.045), 0.0, 1.0)
+    var glass := _make_emission_material(Color(0.08, 0.22, 0.42), 0.7)
+    var concrete := _make_material(Color(0.2, 0.21, 0.23), 0.15, 0.78)
+    var road_sign := _make_emission_material(Color(0.95, 0.62, 0.08), 0.35)
+
+    for i in range(12):
+        var z := 10.0 - float(i) * 6.5
+        _add_premium_tree_cluster(Vector3(-12.0 - float(i % 3) * 1.5, 0.0, z), grass, dark_grass, 1.0 + float(i % 3) * 0.12)
+        _add_premium_tree_cluster(Vector3(17.0 + float(i % 2) * 2.0, 0.0, z - 2.5), grass, dark_grass, 0.9 + float((i + 1) % 3) * 0.15)
+
+    var buildings := [
+        [Vector3(-17.0, 4.0, -4.0), Vector3(5.5, 8.0, 5.5)],
+        [Vector3(18.0, 5.5, -15.0), Vector3(6.5, 11.0, 6.5)],
+        [Vector3(-18.0, 6.0, -29.0), Vector3(7.0, 12.0, 7.0)],
+        [Vector3(20.0, 4.5, -43.0), Vector3(6.0, 9.0, 6.0)],
+        [Vector3(-16.0, 5.0, -55.0), Vector3(6.0, 10.0, 6.0)]
+    ]
+    for item in buildings:
+        _add_premium_building(item[0], item[1], concrete, glass)
+
+    _add_premium_bridge(Vector3(3.5, 4.5, -21.0), 18.0, concrete)
+    _add_premium_sign(Vector3(-7.5, 2.0, -18.0), "RACE", road_sign)
+    _add_premium_sign(Vector3(14.0, 2.0, -38.0), "SLOW", road_sign)
+
+func _add_premium_tree_cluster(position: Vector3, leaf_material: StandardMaterial3D, dark_material: StandardMaterial3D, scale_value: float) -> void:
+    var root := Node3D.new()
+    root.position = position
+    root.scale = Vector3.ONE * scale_value
+    add_child(root)
+
+    var trunk := MeshInstance3D.new()
+    var trunk_mesh := CylinderMesh.new()
+    trunk_mesh.top_radius = 0.16
+    trunk_mesh.bottom_radius = 0.28
+    trunk_mesh.height = 3.2
+    trunk.mesh = trunk_mesh
+    trunk.position.y = 1.6
+    trunk.material_override = _make_material(Color(0.2, 0.09, 0.035), 0.0, 1.0)
+    root.add_child(trunk)
+
+    for offset in [Vector3(0.0, 3.1, 0.0), Vector3(-0.65, 2.8, 0.15), Vector3(0.65, 2.8, -0.1)]:
+        var crown := MeshInstance3D.new()
+        var crown_mesh := SphereMesh.new()
+        crown_mesh.radius = 1.25
+        crown_mesh.height = 2.4
+        crown.mesh = crown_mesh
+        crown.position = offset
+        crown.material_override = leaf_material if offset.x == 0.0 else dark_material
+        root.add_child(crown)
+
+func _add_premium_building(position: Vector3, size: Vector3, concrete: StandardMaterial3D, glass: StandardMaterial3D) -> void:
+    var root := Node3D.new()
+    root.position = position
+    add_child(root)
+
+    var body := MeshInstance3D.new()
+    var body_mesh := BoxMesh.new()
+    body_mesh.size = size
+    body.mesh = body_mesh
+    body.material_override = concrete
+    root.add_child(body)
+
+    for y in range(1, max(2, int(size.y / 2.0))):
+        for side in [-1.0, 1.0]:
+            var window := MeshInstance3D.new()
+            var window_mesh := BoxMesh.new()
+            window_mesh.size = Vector3(size.x * 0.62, 0.5, 0.08)
+            window.mesh = window_mesh
+            window.position = Vector3(0.0, -size.y * 0.5 + y * 1.55, side * size.z * 0.505)
+            window.material_override = glass
+            root.add_child(window)
+
+func _add_premium_bridge(position: Vector3, rotation_y: float, material: StandardMaterial3D) -> void:
+    var bridge := Node3D.new()
+    bridge.position = position
+    bridge.rotation_degrees.y = rotation_y
+    add_child(bridge)
+
+    var deck := MeshInstance3D.new()
+    var deck_mesh := BoxMesh.new()
+    deck_mesh.size = Vector3(16.0, 0.45, 3.2)
+    deck.mesh = deck_mesh
+    deck.position.y = 4.0
+    deck.material_override = material
+    bridge.add_child(deck)
+
+    for side in [-1.0, 1.0]:
+        for x in [-6.0, 0.0, 6.0]:
+            var pillar := MeshInstance3D.new()
+            var pillar_mesh := BoxMesh.new()
+            pillar_mesh.size = Vector3(0.45, 4.0, 0.45)
+            pillar.mesh = pillar_mesh
+            pillar.position = Vector3(x, 2.0, side * 1.1)
+            pillar.material_override = material
+            bridge.add_child(pillar)
+
+func _add_premium_sign(position: Vector3, text_value: String, material: StandardMaterial3D) -> void:
+    var sign := Node3D.new()
+    sign.position = position
+    add_child(sign)
+
+    var pole := MeshInstance3D.new()
+    var pole_mesh := CylinderMesh.new()
+    pole_mesh.top_radius = 0.07
+    pole_mesh.bottom_radius = 0.1
+    pole_mesh.height = 3.2
+    pole.mesh = pole_mesh
+    pole.position.y = 1.6
+    pole.material_override = _make_material(Color(0.12, 0.13, 0.15), 0.65, 0.4)
+    sign.add_child(pole)
+
+    var board := MeshInstance3D.new()
+    var board_mesh := BoxMesh.new()
+    board_mesh.size = Vector3(2.6, 0.85, 0.14)
+    board.mesh = board_mesh
+    board.position.y = 3.15
+    board.material_override = material
+    sign.add_child(board)
 
 func _build_professional_track() -> void:
     track_path = [
