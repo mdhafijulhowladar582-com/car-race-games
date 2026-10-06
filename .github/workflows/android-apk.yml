@@ -105,7 +105,7 @@ jobs:
           test -f export_presets.cfg
           grep -q 'name="Android"' export_presets.cfg
           grep -q 'platform="Android"' export_presets.cfg
-          grep -q 'package/unique_name="com.hafijul.novalabs.carrace"' export_presets.cfg
+          grep -q 'package/unique_name="com.hafijulnovalabs.carracegames"' export_presets.cfg
       - name: Export debug APK
         shell: bash
         run: |
