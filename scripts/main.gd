@@ -70,6 +70,9 @@ var leaderboard_entries: Array = []
 var race_start_z := 15.0
 var finish_z := -66.0
 var track_path: Array[Vector3] = []
+var sun_light: DirectionalLight3D
+var sky_fill_light: DirectionalLight3D
+var lighting_tuning := 1.0
 
 
 func _ready() -> void:
@@ -90,6 +93,7 @@ func _ready() -> void:
     _build_ai_opponents()
     _build_game_over_ui()
     _build_mode_select()
+    _apply_professional_lighting(selected_weather)
     _apply_weather(selected_weather)
     _apply_map(selected_map)
     _build_rewards_hud()
@@ -199,6 +203,32 @@ func _build_environment() -> void:
         lamp.omni_range = 10.0
         lamp.shadow_enabled = true
         add_child(lamp)
+
+func _apply_professional_lighting(weather: String) -> void:
+    if not sun_light:
+        sun_light = get_node_or_null("SunLight") as DirectionalLight3D
+    if not sky_fill_light:
+        sky_fill_light = get_node_or_null("SkyFillLight") as DirectionalLight3D
+    if not sun_light:
+        return
+    if weather == "NIGHT":
+        sun_light.light_color = Color(0.34, 0.43, 0.68)
+        sun_light.light_energy = 0.32 * lighting_tuning
+        sun_light.rotation_degrees = Vector3(-18.0, 35.0, 0.0)
+        if sky_fill_light:
+            sky_fill_light.light_energy = 0.18
+    elif weather == "RAIN + FOG":
+        sun_light.light_color = Color(0.72, 0.78, 0.86)
+        sun_light.light_energy = 0.82 * lighting_tuning
+        sun_light.rotation_degrees = Vector3(-38.0, -28.0, 0.0)
+        if sky_fill_light:
+            sky_fill_light.light_energy = 0.24
+    else:
+        sun_light.light_color = Color(1.0, 0.92, 0.78)
+        sun_light.light_energy = 1.45 * lighting_tuning
+        sun_light.rotation_degrees = Vector3(-48.0, -32.0, 0.0)
+        if sky_fill_light:
+            sky_fill_light.light_energy = 0.28
 
 func _build_professional_environment() -> void:
     var road_side := _make_material(Color(0.16, 0.19, 0.17), 0.0, 0.9)
