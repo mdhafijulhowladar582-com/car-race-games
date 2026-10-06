@@ -41,6 +41,10 @@ var lap := 1
 var total_laps := 1
 var coins := 0
 var xp := 0
+var selected_weather := "DAY"
+var weather_overlay: ColorRect
+var rain_particles: GPUParticles3D
+var fog_environment: Environment
 var reward_label: Label
 var coins_label: Label
 var speed_label: Label
@@ -62,8 +66,10 @@ func _ready() -> void:
     _build_ai_opponents()
     _build_game_over_ui()
     _build_mode_select()
+    _apply_weather(selected_weather)
     _build_rewards_hud()
     _build_professional_mobile_hud()
+    _build_weather_select()
 
     var car := get_node_or_null("PlayerCar")
     if car:
@@ -801,6 +807,87 @@ func _select_car(car_name: String) -> void:
         car_label.text = "CAR: GT\nSpeed 38 | Acceleration 16 | Handling 2.4"
     else:
         car_label.text = "CAR: SPORTS\nSpeed 34 | Acceleration 18 | Handling 2.2"
+
+func _build_weather_select() -> void:
+    var panel := Panel.new()
+    panel.position = Vector2(30.0, 300.0)
+    panel.size = Vector2(320.0, 220.0)
+    panel.z_index = 5
+    mode_overlay.add_child(panel)
+
+    var title := Label.new()
+    title.text = "WEATHER"
+    title.position = Vector2(20.0, 12.0)
+    title.size = Vector2(280.0, 35.0)
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title.add_theme_font_size_override("font_size", 22)
+    panel.add_child(title)
+
+    _add_weather_button(panel, "DAY", Vector2(20.0, 55.0), "DAY")
+    _add_weather_button(panel, "NIGHT", Vector2(20.0, 110.0), "NIGHT")
+    _add_weather_button(panel, "RAIN + FOG", Vector2(20.0, 165.0), "RAIN")
+
+func _add_weather_button(parent: Control, text_value: String, button_position: Vector2, weather_value: String) -> void:
+    var button := Button.new()
+    button.text = text_value
+    button.position = button_position
+    button.size = Vector2(280.0, 45.0)
+    button.focus_mode = Control.FOCUS_NONE
+    button.pressed.connect(_select_weather.bind(weather_value))
+    parent.add_child(button)
+
+func _select_weather(weather_value: String) -> void:
+    selected_weather = weather_value
+    _apply_weather(selected_weather)
+
+func _apply_weather(weather_value: String) -> void:
+    var world := get_node_or_null("WorldEnvironment") as WorldEnvironment
+    if not world:
+        return
+    var environment := world.environment
+    if weather_value == "NIGHT":
+        environment.background_color = Color(0.015, 0.025, 0.07)
+        environment.ambient_light_color = Color(0.2, 0.25, 0.45)
+        environment.ambient_light_energy = 0.42
+    elif weather_value == "RAIN":
+        environment.background_color = Color(0.06, 0.075, 0.1)
+        environment.ambient_light_color = Color(0.38, 0.42, 0.5)
+        environment.ambient_light_energy = 0.58
+        environment.fog_enabled = true
+        environment.fog_light_color = Color(0.3, 0.34, 0.4)
+        environment.fog_density = 0.012
+        _ensure_rain()
+    else:
+        environment.background_color = Color(0.08, 0.1, 0.14)
+        environment.ambient_light_color = Color(0.55, 0.6, 0.7)
+        environment.ambient_light_energy = 0.8
+        environment.fog_enabled = false
+        if is_instance_valid(rain_particles):
+            rain_particles.emitting = false
+
+func _ensure_rain() -> void:
+    if is_instance_valid(rain_particles):
+        rain_particles.emitting = true
+        return
+    rain_particles = GPUParticles3D.new()
+    rain_particles.name = "RainParticles"
+    rain_particles.amount = 260
+    rain_particles.lifetime = 0.8
+    rain_particles.visibility_aabb = AABB(Vector3(-35.0, -1.0, -80.0), Vector3(70.0, 28.0, 100.0))
+    var material := ParticleProcessMaterial.new()
+    material.direction = Vector3(0.0, -1.0, 0.0)
+    material.initial_velocity_min = 22.0
+    material.initial_velocity_max = 30.0
+    material.gravity = Vector3(0.0, -5.0, 0.0)
+    material.scale_min = 0.025
+    material.scale_max = 0.05
+    rain_particles.process_material = material
+    var mesh := BoxMesh.new()
+    mesh.size = Vector3(0.025, 0.35, 0.025)
+    rain_particles.draw_pass_1 = mesh
+    rain_particles.position = Vector3(4.0, 13.0, -25.0)
+    add_child(rain_particles)
+    rain_particles.emitting = true
 
 func _build_garage(parent: Control) -> void:
     var garage_button := Button.new()
