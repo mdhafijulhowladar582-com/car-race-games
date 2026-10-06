@@ -30,7 +30,7 @@ var garage_info_label: Label
 var ai_opponents: Array[Node3D] = []
 var ai_count := 3
 var ai_skill_profiles := [0.94, 1.0, 1.06]
-var ai_racing_offsets := [-1.8, 0.0, 1.8]
+var ai_racing_offsets := [-3.2, -1.6, 1.6]
 var ai_race_progress: Array[float] = []
 var ai_last_positions: Array[int] = []
 var player_race_position := 1
@@ -118,8 +118,8 @@ func _load_progress() -> void:
         total_races = int(data["total_races"])
     if data.has("best_time"):
         best_time = float(data["best_time"])
-    if data.has("achievements"):
-        achievements = Array(data["achievements"])
+    if data.has("achievements") and data["achievements"] is Array:
+        achievements.assign(data["achievements"])
     if data.has("local_leaderboard") and data["local_leaderboard"] is Array:
         local_leaderboard = Array(data["local_leaderboard"])
         local_leaderboard.sort_custom(func(a, b) -> bool:
@@ -1372,7 +1372,7 @@ func _build_environment() -> void:
         lamp.light_color = Color(1.0, 0.72, 0.38)
         lamp.light_energy = 1.8
         lamp.omni_range = 10.0
-        lamp.shadow_enabled = true
+        lamp.shadow_enabled = false
         add_child(lamp)
 
 func _apply_professional_lighting(weather: String) -> void:
