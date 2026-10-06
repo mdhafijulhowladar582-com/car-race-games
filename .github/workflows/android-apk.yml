@@ -90,6 +90,15 @@ jobs:
           touch android/build/.gdignore
           printf '4.7.stable' > android/.build_version
           unzip -q ~/.local/share/godot/export_templates/4.7.stable/android_source.zip -d android/build
+      - name: Build Google Sign-In Android plugin
+        shell: bash
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-8.11.1-bin.zip
+          unzip -q gradle-8.11.1-bin.zip
+          ./gradle-8.11.1/bin/gradle -p android_plugin :plugin:assemble --no-daemon
+          test -s addons/firebase_google_signin/bin/debug/FirebaseGoogleSignIn-debug.aar
+          test -s addons/firebase_google_signin/bin/release/FirebaseGoogleSignIn-release.aar
+          rm -f gradle-8.11.1-bin.zip
       - name: Validate Godot project
         shell: bash
         run: |
