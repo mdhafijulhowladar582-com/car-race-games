@@ -1182,16 +1182,6 @@ func _on_firebase_rank_failed(_message: String) -> void:
     if leaderboard_label and is_instance_valid(leaderboard_label):
         _refresh_leaderboard()
 
-func _on_firebase_rank_loaded(rank: int) -> void:
-    global_rank = rank
-    if leaderboard_label and is_instance_valid(leaderboard_label):
-        _refresh_leaderboard()
-
-func _on_firebase_rank_failed(message: String) -> void:
-    global_rank = 0
-    if leaderboard_label and is_instance_valid(leaderboard_label):
-        _refresh_leaderboard()
-
 func _on_firebase_score_failed(message: String) -> void:
     if firebase_auth_status == "SIGNED_IN":
         online_leaderboard_status = "OFFLINE"
