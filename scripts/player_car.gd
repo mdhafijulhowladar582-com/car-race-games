@@ -214,6 +214,8 @@ func _physics_process(delta: float) -> void:
 
     var throttle := Input.get_axis("brake", "accelerate")
     var steer_input := Input.get_axis("steer_left", "steer_right")
+    if abs(steer_input) < 0.05:
+        steer_input = Input.get_joy_axis(0, JOY_AXIS_LEFT_X)
 
     _update_speed(throttle, delta)
     _update_steering(steer_input, delta)
