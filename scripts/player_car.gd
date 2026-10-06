@@ -45,6 +45,8 @@ var camera_base_rotation := Vector3(-15.0, 180.0, 0.0)
 var camera_shake := 0.0
 var camera_shake_strength := 0.0
 var camera_cinematic := false
+var boost_particles: GPUParticles3D
+var impact_particles: GPUParticles3D
 var car_model := "SPORTS"
 var car_max_speed := 34.0
 var car_acceleration := 18.0
@@ -113,6 +115,7 @@ func _ready() -> void:
     health = max_health
     _build_car()
     _build_audio()
+    _build_professional_vfx()
     _build_effects()
     camera = get_node_or_null("Camera3D") as Camera3D
     if is_instance_valid(camera):
@@ -121,6 +124,57 @@ func _ready() -> void:
         camera.fov = 70.0
     health_changed.emit(health, max_health)
 
+func _build_professional_vfx() -> void:
+    boost_particles = GPUParticles3D.new()
+    boost_particles.name = "BoostSmoke"
+    boost_particles.amount = 45
+    boost_particles.lifetime = 0.55
+    boost_particles.emitting = false
+    var boost_material := ParticleProcessMaterial.new()
+    boost_material.direction = Vector3(0.0, 0.25, 1.0)
+    boost_material.spread = 28.0
+    boost_material.initial_velocity_min = 2.0
+    boost_material.initial_velocity_max = 5.0
+    boost_material.gravity = Vector3(0.0, 0.8, 0.0)
+    boost_material.scale_min = 0.06
+    boost_material.scale_max = 0.14
+    boost_particles.process_material = boost_material
+    var smoke_mesh := SphereMesh.new()
+    smoke_mesh.radius = 0.12
+    smoke_mesh.height = 0.24
+    boost_particles.draw_pass_1 = smoke_mesh
+    boost_particles.position = Vector3(0.0, 0.25, 1.65)
+    add_child(boost_particles)
+
+    impact_particles = GPUParticles3D.new()
+    impact_particles.name = "ImpactDust"
+    impact_particles.amount = 35
+    impact_particles.lifetime = 0.45
+    impact_particles.emitting = false
+    var impact_material := ParticleProcessMaterial.new()
+    impact_material.direction = Vector3(0.0, 1.0, 0.0)
+    impact_material.spread = 55.0
+    impact_material.initial_velocity_min = 3.0
+    impact_material.initial_velocity_max = 8.0
+    impact_material.gravity = Vector3(0.0, -7.0, 0.0)
+    impact_material.scale_min = 0.04
+    impact_material.scale_max = 0.11
+    impact_particles.process_material = impact_material
+    var dust_mesh := SphereMesh.new()
+    dust_mesh.radius = 0.1
+    dust_mesh.height = 0.2
+    impact_particles.draw_pass_1 = dust_mesh
+    impact_particles.position = Vector3(0.0, 0.25, -0.8)
+    add_child(impact_particles)
+
+func _update_professional_vfx() -> void:
+    if not is_instance_valid(boost_particles):
+        return
+    var speed := velocity.length()
+    boost_particles.emitting = speed > 18.0 and throttle_input > 0.25 and health > max_health * 0.25
+    if is_instance_valid(impact_particles):
+        impact_particles.position = Vector3(0.0, 0.25, -0.9)
+    
 func _physics_process(delta: float) -> void:
     damage_timer = max(0.0, damage_timer - delta)
 
