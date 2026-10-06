@@ -84,6 +84,9 @@ var online_leaderboard_url := ""
 var leaderboard_http: HTTPRequest
 var online_leaderboard_status := "OFFLINE"
 var firebase_service: Node
+var google_signin: RefCounted
+var auth_button: Button
+var auth_status_label: Label
 var firebase_auth_status := "GUEST"
 var firebase_display_name := ""
 var career_level := 1
@@ -180,6 +183,7 @@ func _ready() -> void:
     _build_car_select_button()
     _build_settings_button()
     _build_leaderboard_button()
+    _build_auth_ui()
     _setup_firebase_service()
     _update_map_label()
     _update_rewards_hud()
@@ -941,6 +945,65 @@ func _build_leaderboard_button() -> void:
     button.pressed.connect(_show_leaderboard)
     add_child(button)
 
+func _build_auth_ui() -> void:
+    google_signin = preload("res://scripts/google_signin.gd").new()
+    google_signin.sign_in_success.connect(_on_google_sign_in_success)
+    google_signin.sign_in_failed.connect(_on_google_sign_in_failed)
+    google_signin.signed_out.connect(_on_google_signed_out)
+
+    auth_button = Button.new()
+    auth_button.position = Vector2(845.0, 20.0)
+    auth_button.size = Vector2(175.0, 42.0)
+    auth_button.text = "GOOGLE LOGIN"
+    auth_button.pressed.connect(_on_auth_button_pressed)
+    add_child(auth_button)
+
+    auth_status_label = Label.new()
+    auth_status_label.position = Vector2(845.0, 62.0)
+    auth_status_label.size = Vector2(175.0, 30.0)
+    auth_status_label.text = "GUEST MODE"
+    auth_status_label.add_theme_font_size_override("font_size", 14)
+    add_child(auth_status_label)
+
+func _on_auth_button_pressed() -> void:
+    if firebase_auth_status == "SIGNED_IN":
+        google_signin.sign_out()
+    else:
+        google_signin.sign_in()
+
+func _on_google_sign_in_success(id_token: String, _display_name: String, _email: String) -> void:
+    if firebase_service:
+        firebase_service.sign_in_with_google_id_token(id_token)
+    else:
+        firebase_auth_status = "AUTH_ERROR"
+        _update_auth_ui()
+
+func _on_google_sign_in_failed(message: String) -> void:
+    firebase_auth_status = "AUTH_ERROR"
+    _update_auth_ui()
+    if auth_status_label:
+        auth_status_label.text = message.left(24)
+
+func _on_google_signed_out() -> void:
+    if firebase_service:
+        firebase_service.sign_out()
+    else:
+        firebase_auth_status = "GUEST"
+        _update_auth_ui()
+
+func _update_auth_ui() -> void:
+    if not auth_button:
+        return
+    if firebase_auth_status == "SIGNED_IN":
+        auth_button.text = "LOG OUT"
+        auth_status_label.text = firebase_display_name.left(20) if not firebase_display_name.is_empty() else "SIGNED IN"
+    elif firebase_auth_status == "AUTH_ERROR":
+        auth_button.text = "GOOGLE LOGIN"
+        auth_status_label.text = "LOGIN ERROR"
+    else:
+        auth_button.text = "GOOGLE LOGIN"
+        auth_status_label.text = "GUEST MODE"
+
 func _setup_firebase_service() -> void:
     firebase_service = preload("res://scripts/firebase_service.gd").new()
     add_child(firebase_service)
@@ -1021,9 +1084,13 @@ func _on_firebase_auth_changed(authenticated: bool, name: String) -> void:
     else:
         firebase_auth_status = "GUEST"
         firebase_display_name = ""
+    _update_auth_ui()
 
 func _on_firebase_auth_failed(message: String) -> void:
     firebase_auth_status = "AUTH_ERROR"
+    _update_auth_ui()
+    if auth_status_label:
+        auth_status_label.text = message.left(24)
 
 func _on_firebase_leaderboard_loaded(entries: Array) -> void:
     leaderboard_entries = entries
