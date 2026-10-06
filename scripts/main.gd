@@ -293,6 +293,7 @@ func _add_touch_button(parent: Control, label_text: String, action_name: String,
 func _finish_race() -> void:
     if race_finished:
         return
+    var score_valid := race_started and race_elapsed >= 3.0 and current_checkpoint >= total_checkpoints
     race_finished = true
     race_started = false
     var car := get_node_or_null("PlayerCar")
