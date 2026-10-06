@@ -50,3 +50,7 @@ environment/defaults/default_clear_color=Color(0.08, 0.1, 0.14, 1)
 [audio]
 
 audio/default_bus_layout=""
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/firebase_google_signin/plugin.cfg")
