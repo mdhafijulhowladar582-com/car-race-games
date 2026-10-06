@@ -91,7 +91,6 @@ var auth_status_label: Label
 var firebase_auth_status := "GUEST"
 var firebase_display_name := ""
 var global_rank := 0
-var global_rank := 0
 var career_level := 1
 var career_wins := 0
 var career_races := 0
@@ -868,9 +867,8 @@ func _show_map_selector() -> void:
     close.position = Vector2(150.0, 315.0)
     close.size = Vector2(120.0, 45.0)
     close.pressed.connect(func() -> void:
-        if is_instance_valid(garage_overlay):
-            garage_overlay.queue_free()
-        garage_overlay = null
+        if is_instance_valid(overlay):
+            overlay.queue_free()
     )
     overlay.add_child(close)
 
@@ -1047,8 +1045,6 @@ func _setup_firebase_service() -> void:
     firebase_service.auth_failed.connect(_on_firebase_auth_failed)
     firebase_service.score_saved.connect(_on_firebase_score_saved)
     firebase_service.score_failed.connect(_on_firebase_score_failed)
-    firebase_service.rank_loaded.connect(_on_firebase_rank_loaded)
-    firebase_service.rank_failed.connect(_on_firebase_rank_failed)
     firebase_service.rank_loaded.connect(_on_firebase_rank_loaded)
     firebase_service.rank_failed.connect(_on_firebase_rank_failed)
     online_leaderboard_status = "CONNECTING"
