@@ -29,6 +29,9 @@ var damage_timer := 0.0
 var is_game_over := false
 var engine_player: AudioStreamPlayer3D
 var engine_high_player: AudioStreamPlayer3D
+var engine_load_player: AudioStreamPlayer3D
+var gear_shift_player: AudioStreamPlayer3D
+var previous_speed_ratio := 0.0
 var tire_player: AudioStreamPlayer3D
 var wind_player: AudioStreamPlayer3D
 var brake_player: AudioStreamPlayer3D
@@ -171,6 +174,7 @@ func _update_professional_vfx() -> void:
     if not is_instance_valid(boost_particles):
         return
     var speed := velocity.length()
+    var throttle_input := Input.get_axis("brake", "accelerate")
     boost_particles.emitting = speed > 18.0 and throttle_input > 0.25 and health > max_health * 0.25
     if is_instance_valid(impact_particles):
         impact_particles.position = Vector3(0.0, 0.25, -0.9)
@@ -460,6 +464,21 @@ func _build_audio() -> void:
     game_over_player.max_distance = 50.0
     add_child(game_over_player)
 
+    engine_load_player = AudioStreamPlayer3D.new()
+    engine_load_player.name = "EngineLoad"
+    engine_load_player.stream = _create_tone(110.0, 0.4)
+    engine_load_player.volume_db = -28.0
+    engine_load_player.max_distance = 48.0
+    add_child(engine_load_player)
+    engine_load_player.play()
+
+    gear_shift_player = AudioStreamPlayer3D.new()
+    gear_shift_player.name = "GearShiftAudio"
+    gear_shift_player.stream = _create_tone(420.0, 0.08)
+    gear_shift_player.volume_db = -16.0
+    gear_shift_player.max_distance = 42.0
+    add_child(gear_shift_player)
+
 func _create_tone(frequency: float, duration: float) -> AudioStreamWAV:
     var sample_rate := 22050
     var samples := int(sample_rate * duration)
@@ -521,6 +540,23 @@ func _update_engine_audio(_delta: float) -> void:
     if is_instance_valid(engine_high_player):
         engine_high_player.pitch_scale = lerp(0.72, 2.2, speed_ratio)
         engine_high_player.volume_db = lerp(-29.0, -11.0, speed_ratio) + lerp(-2.0, 3.0, throttle_ratio)
+
+    if is_instance_valid(engine_load_player):
+        var load_ratio := clamp(throttle_ratio * speed_ratio, 0.0, 1.0)
+        engine_load_player.pitch_scale = lerp(0.72, 1.9, speed_ratio)
+        engine_load_player.volume_db = lerp(-34.0, -12.0, load_ratio)
+        if Input.is_action_pressed("accelerate"):
+            engine_load_player.volume_db += 3.0
+
+    if is_instance_valid(gear_shift_player):
+        if previous_speed_ratio < 0.72 and speed_ratio >= 0.72:
+            gear_shift_player.pitch_scale = 1.0
+            gear_shift_player.play()
+        elif previous_speed_ratio >= 0.72 and speed_ratio < 0.68:
+            gear_shift_player.pitch_scale = 0.82
+            gear_shift_player.play()
+
+    previous_speed_ratio = speed_ratio
 
 func _play_brake_audio() -> void:
     if is_instance_valid(brake_player) and not brake_player.playing:
