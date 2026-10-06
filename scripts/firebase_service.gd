@@ -4,6 +4,8 @@ signal leaderboard_loaded(entries: Array)
 signal leaderboard_failed(message: String)
 signal auth_changed(authenticated: bool, display_name: String)
 signal auth_failed(message: String)
+signal score_saved
+signal score_failed(message: String)
 
 const FIREBASE_PROJECT_ID := "carres-8d409"
 const FIRESTORE_BASE_URL := "https://firestore.googleapis.com/v1/projects/%s/databases/(default)/documents" % FIREBASE_PROJECT_ID
@@ -91,6 +93,86 @@ func _on_google_auth_completed(result: int, response_code: int, _headers: Packed
         return
 
     auth_changed.emit(true, display_name)
+
+func save_best_score(race_time: float, map_name: String, car_name: String) -> void:
+    if not is_authenticated() or user_id.is_empty():
+        score_failed.emit("Guest mode: online score upload is disabled.")
+        return
+    if race_time <= 0.0:
+        score_failed.emit("Invalid race time.")
+        return
+
+    var url := FIRESTORE_BASE_URL + LEADERBOARD_PATH + "/" + user_id.uri_encode()
+    var headers := PackedStringArray([
+        "Accept: application/json",
+        "Authorization: Bearer " + id_token
+    ])
+    var request := HTTPRequest.new()
+    request.name = "FirebaseScoreRead"
+    add_child(request)
+    request.request_completed.connect(_on_score_read_completed.bind(request, race_time, map_name, car_name))
+    var error := request.request(url, headers, HTTPClient.METHOD_GET)
+    if error != OK:
+        request.queue_free()
+        score_failed.emit("Could not start score check.")
+
+func _on_score_read_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest, race_time: float, map_name: String, car_name: String) -> void:
+    request.queue_free()
+    if result != HTTPRequest.RESULT_SUCCESS:
+        score_failed.emit("Firebase score check failed.")
+        return
+
+    var existing_time := INF
+    if response_code >= 200 and response_code < 300:
+        var data = JSON.parse_string(body.get_string_from_utf8())
+        if data is Dictionary:
+            var fields: Dictionary = data.get("fields", {})
+            existing_time = _field_number(fields, "time", INF)
+    elif response_code != 404:
+        score_failed.emit("Firebase score check failed (%d)." % response_code)
+        return
+
+    if race_time >= existing_time:
+        score_saved.emit()
+        return
+
+    var url := FIRESTORE_BASE_URL + LEADERBOARD_PATH + "/" + user_id.uri_encode()
+    var headers := PackedStringArray([
+        "Content-Type: application/json",
+        "Authorization: Bearer " + id_token
+    ])
+    var payload := {
+        "fields": {
+            "userId": {"stringValue": user_id},
+            "name": {"stringValue": display_name if not display_name.is_empty() else "Player"},
+            "time": {"doubleValue": race_time},
+            "map": {"stringValue": map_name},
+            "car": {"stringValue": car_name},
+            "timestamp": {"timestampValue": Time.get_datetime_string_from_system(true)}
+        }
+    }
+    var write_request := HTTPRequest.new()
+    write_request.name = "FirebaseScoreWrite"
+    add_child(write_request)
+    write_request.request_completed.connect(_on_score_write_completed.bind(write_request))
+    var error := write_request.request(url, headers, HTTPClient.METHOD_PATCH, JSON.stringify(payload))
+    if error != OK:
+        write_request.queue_free()
+        score_failed.emit("Could not start score upload.")
+
+func _on_score_write_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray, request: HTTPRequest) -> void:
+    request.queue_free()
+    if result != HTTPRequest.RESULT_SUCCESS:
+        score_failed.emit("Firebase score upload failed.")
+        return
+    if response_code < 200 or response_code >= 300:
+        var data = JSON.parse_string(body.get_string_from_utf8())
+        var message := "Firebase score upload failed (%d)." % response_code
+        if data is Dictionary and data.has("error") and data["error"] is Dictionary and data["error"].has("message"):
+            message = str(data["error"]["message"])
+        score_failed.emit(message)
+        return
+    score_saved.emit()
 
 func load_public_leaderboard() -> void:
     if not http:
