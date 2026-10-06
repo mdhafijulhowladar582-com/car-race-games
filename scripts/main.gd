@@ -538,10 +538,69 @@ func _build_leaderboard_button() -> void:
     var button := Button.new()
     button.text = "Leaderboard"
     button.position = Vector2(1110.0, 70.0)
+    button.size = Vector2(150.0, 52.0)
+    button.pressed.connect(_show_leaderboard)
     add_child(button)
 
 func _setup_online_leaderboard() -> void:
+    leaderboard_http = HTTPRequest.new()
+    leaderboard_http.name = "LeaderboardHTTP"
+    add_child(leaderboard_http)
+    leaderboard_http.request_completed.connect(_on_leaderboard_request_completed)
     online_leaderboard_status = "OFFLINE"
+
+func _show_leaderboard() -> void:
+    if leaderboard_overlay and is_instance_valid(leaderboard_overlay):
+        leaderboard_overlay.queue_free()
+        leaderboard_overlay = null
+        leaderboard_label = null
+        return
+
+    leaderboard_overlay = ColorRect.new()
+    leaderboard_overlay.color = Color(0.02, 0.025, 0.04, 0.94)
+    leaderboard_overlay.position = Vector2(180.0, 90.0)
+    leaderboard_overlay.size = Vector2(920.0, 560.0)
+    add_child(leaderboard_overlay)
+
+    leaderboard_label = Label.new()
+    leaderboard_label.position = Vector2(35.0, 30.0)
+    leaderboard_label.size = Vector2(850.0, 470.0)
+    leaderboard_label.add_theme_font_size_override("font_size", 24)
+    leaderboard_overlay.add_child(leaderboard_label)
+
+    var close_button := Button.new()
+    close_button.text = "CLOSE"
+    close_button.position = Vector2(760.0, 485.0)
+    close_button.size = Vector2(120.0, 48.0)
+    close_button.pressed.connect(_show_leaderboard)
+    leaderboard_overlay.add_child(close_button)
+
+    _refresh_leaderboard()
+
+func _refresh_leaderboard() -> void:
+    if leaderboard_entries.is_empty():
+        leaderboard_label.text = "LEADERBOARD\n\nNo local records yet."
+    else:
+        var text_lines := ["LEADERBOARD", ""]
+        for i in range(mini(leaderboard_entries.size(), 10)):
+            var entry = leaderboard_entries[i]
+            text_lines.append("%02d. %s — %s" % [i + 1, str(entry.get("name", "PLAYER")), str(entry.get("time", "--"))])
+        leaderboard_label.text = "\n".join(text_lines)
+
+    if online_leaderboard_url.is_empty():
+        online_leaderboard_status = "OFFLINE"
+
+func _on_leaderboard_request_completed(_result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+    if response_code < 200 or response_code >= 300:
+        online_leaderboard_status = "OFFLINE"
+        return
+
+    var parsed = JSON.parse_string(body.get_string_from_utf8())
+    if parsed is Array:
+        leaderboard_entries = parsed
+        online_leaderboard_status = "ONLINE"
+        if leaderboard_label and is_instance_valid(leaderboard_label):
+            _refresh_leaderboard()
 
 func _update_map_label() -> void:
     if map_label:
