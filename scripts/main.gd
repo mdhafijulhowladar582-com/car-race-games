@@ -15,7 +15,7 @@ var timer_label: Label
 var position_label: Label
 var checkpoint_label: Label
 var result_time_label: Label
-var ai_opponents: Array[CharacterBody3D] = []
+var ai_opponents: Array[Node3D] = []
 var ai_count := 3
 var ambience_player: AudioStreamPlayer3D
 var race_finished := false
@@ -739,7 +739,7 @@ func _build_ai_opponents() -> void:
         ai.position = Vector3(-3.0 + i * 3.0, 1.0, 19.0 + i * 2.0)
         ai.set_script(ai_script)
         add_child(ai)
-        ai.setup(route)
+        ai.call("setup", route)
         ai_opponents.append(ai)
 
 func _get_player_position_rank() -> int:
@@ -914,10 +914,10 @@ func _process(delta: float) -> void:
         lap_label.text = "LAP %d / %d" % [lap, total_laps]
 
     for ai in ai_opponents:
-        if is_instance_valid(ai) and not ai.finished and ai.global_position.z <= finish_z:
-            ai.finished = true
-            ai.race_active = false
-            ai.velocity = Vector3.ZERO
+        if is_instance_valid(ai) and not bool(ai.get("finished")) and ai.global_position.z <= finish_z:
+            ai.set("finished", true)
+            ai.set("race_active", false)
+            ai.set("velocity", Vector3.ZERO)
 
     var distance_total := abs(finish_z - race_start_z)
     var distance_done := clamp(abs(race_start_z - car.global_position.z), 0.0, distance_total)
