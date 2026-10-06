@@ -21,6 +21,10 @@ var selected_mode := "quick_race"
 var mode_name := "QUICK RACE"
 var selected_car := "SPORTS"
 var car_label: Label
+var customization_label: Label
+var selected_color := Color(0.82, 0.025, 0.02)
+var selected_wheels := "SPORT"
+var upgrade_level := 0
 var ai_opponents: Array[Node3D] = []
 var ai_count := 3
 var ambience_player: AudioStreamPlayer3D
@@ -711,6 +715,23 @@ func _build_car_select(parent: Control) -> void:
     _add_car_button(parent, "MUSCLE", Vector2(-105.0, -45.0))
     _add_car_button(parent, "GT", Vector2(100.0, -45.0))
 
+    customization_label = Label.new()
+    customization_label.text = "COLOR: RED   WHEELS: SPORT   UPGRADE: 0/3"
+    customization_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    customization_label.set_anchors_preset(Control.PRESET_CENTER)
+    customization_label.position = Vector2(-360.0, -55.0)
+    customization_label.size = Vector2(720.0, 55.0)
+    customization_label.add_theme_font_size_override("font_size", 19)
+    parent.add_child(customization_label)
+
+    _add_custom_button(parent, "RED", Vector2(-310.0, 115.0), "color_red")
+    _add_custom_button(parent, "BLUE", Vector2(-105.0, 115.0), "color_blue")
+    _add_custom_button(parent, "GREEN", Vector2(100.0, 115.0), "color_green")
+    _add_custom_button(parent, "SPORT WHEELS", Vector2(-310.0, 180.0), "wheel_sport")
+    _add_custom_button(parent, "BLACK WHEELS", Vector2(-105.0, 180.0), "wheel_black")
+    _add_custom_button(parent, "GOLD WHEELS", Vector2(100.0, 180.0), "wheel_gold")
+    _add_custom_button(parent, "UPGRADE +", Vector2(-95.0, 245.0), "upgrade")
+
 func _add_car_button(parent: Control, car_name: String, button_position: Vector2) -> void:
     var button := Button.new()
     button.text = car_name
@@ -721,6 +742,42 @@ func _add_car_button(parent: Control, car_name: String, button_position: Vector2
     button.add_theme_font_size_override("font_size", 20)
     button.pressed.connect(_select_car.bind(car_name))
     parent.add_child(button)
+
+func _add_custom_button(parent: Control, button_text: String, button_position: Vector2, action_name: String) -> void:
+    var button := Button.new()
+    button.text = button_text
+    button.set_anchors_preset(Control.PRESET_CENTER)
+    button.position = button_position
+    button.size = Vector2(190.0, 54.0)
+    button.focus_mode = Control.FOCUS_NONE
+    button.add_theme_font_size_override("font_size", 17)
+    button.pressed.connect(_apply_customization.bind(action_name))
+    parent.add_child(button)
+
+func _apply_customization(action_name: String) -> void:
+    if action_name == "color_red":
+        selected_color = Color(0.82, 0.025, 0.02)
+    elif action_name == "color_blue":
+        selected_color = Color(0.04, 0.08, 0.72)
+    elif action_name == "color_green":
+        selected_color = Color(0.04, 0.55, 0.18)
+    elif action_name == "wheel_black":
+        selected_wheels = "BLACK"
+    elif action_name == "wheel_gold":
+        selected_wheels = "GOLD"
+    elif action_name == "wheel_sport":
+        selected_wheels = "SPORT"
+    elif action_name == "upgrade":
+        upgrade_level = mini(upgrade_level + 1, 3)
+    _refresh_customization_label()
+
+func _refresh_customization_label() -> void:
+    var color_name := "RED"
+    if selected_color == Color(0.04, 0.08, 0.72):
+        color_name = "BLUE"
+    elif selected_color == Color(0.04, 0.55, 0.18):
+        color_name = "GREEN"
+    customization_label.text = "COLOR: %s   WHEELS: %s   UPGRADE: %d/3" % [color_name, selected_wheels, upgrade_level]
 
 func _select_car(car_name: String) -> void:
     selected_car = car_name
@@ -770,7 +827,7 @@ func _build_mode_select() -> void:
     var start := Button.new()
     start.text = "START RACE"
     start.set_anchors_preset(Control.PRESET_CENTER)
-    start.position = Vector2(-170.0, 135.0)
+    start.position = Vector2(-170.0, 315.0)
     start.size = Vector2(340.0, 78.0)
     start.focus_mode = Control.FOCUS_NONE
     start.add_theme_font_size_override("font_size", 28)
@@ -817,6 +874,8 @@ func _start_selected_mode() -> void:
     var car := get_node_or_null("PlayerCar")
     if car and car.has_method("configure_car"):
         car.configure_car(selected_car)
+        if car.has_method("customize_car"):
+            car.customize_car(selected_color, selected_wheels, upgrade_level)
     _start_race_countdown()
 
 func _start_race_countdown() -> void:
