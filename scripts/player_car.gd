@@ -260,7 +260,7 @@ func _build_audio() -> void:
     tire_player = AudioStreamPlayer3D.new()
     tire_player.name = "TireRoadAudio"
     tire_player.stream = _create_noise(0.65)
-    tire_player.volume_db = -26.0
+    tire_player.volume_db = -34.0
     tire_player.max_distance = 42.0
     add_child(tire_player)
     tire_player.play()
@@ -268,7 +268,7 @@ func _build_audio() -> void:
     wind_player = AudioStreamPlayer3D.new()
     wind_player.name = "SpeedWindAudio"
     wind_player.stream = _create_noise(0.9)
-    wind_player.volume_db = -32.0
+    wind_player.volume_db = -42.0
     wind_player.max_distance = 55.0
     add_child(wind_player)
     wind_player.play()
@@ -336,7 +336,7 @@ func _create_noise(duration: float) -> AudioStreamWAV:
     stream.data = data
     return stream
 
-func _update_engine_audio(delta: float) -> void:
+func _update_engine_audio(_delta: float) -> void:
     if not is_instance_valid(engine_player):
         return
 
@@ -353,7 +353,7 @@ func _play_brake_audio() -> void:
     if is_instance_valid(brake_player) and not brake_player.playing:
         brake_player.play()
 
-func _update_driving_audio(_delta: float) -> void:
+func _update_driving_audio() -> void:
     var speed_ratio := clamp(abs(speed) / max_speed, 0.0, 1.0)
     var braking_now := Input.is_action_pressed("brake") and abs(speed) > 1.0
     var steering_now := abs(steering) > 0.55 and abs(speed) > 8.0
