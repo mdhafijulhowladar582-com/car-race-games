@@ -789,36 +789,48 @@ func _add_rock_cluster(position: Vector3, material: StandardMaterial3D) -> void:
         add_child(rock)
 
 func _build_professional_track() -> void:
-    track_path = [
-        Vector3(0.0, 0.0, 15.0),
-        Vector3(-0.8, 0.0, 11.0),
-        Vector3(-2.2, 0.0, 7.0),
-        Vector3(-3.8, 0.02, 3.0),
-        Vector3(-4.8, 0.04, -1.0),
-        Vector3(-4.5, 0.06, -5.0),
-        Vector3(-2.8, 0.08, -9.0),
-        Vector3(0.0, 0.1, -13.0),
-        Vector3(3.5, 0.14, -17.0),
-        Vector3(6.5, 0.18, -21.0),
-        Vector3(8.2, 0.22, -25.0),
-        Vector3(8.8, 0.28, -29.0),
-        Vector3(8.0, 0.34, -33.0),
-        Vector3(5.5, 0.4, -37.0),
-        Vector3(2.0, 0.48, -40.0),
-        Vector3(-1.5, 0.56, -43.0),
-        Vector3(-3.8, 0.62, -47.0),
-        Vector3(-4.5, 0.68, -51.0),
-        Vector3(-3.2, 0.74, -55.0),
-        Vector3(0.0, 0.8, -59.0),
-        Vector3(4.0, 0.86, -63.0),
-        Vector3(7.2, 0.92, -67.0),
-        Vector3(8.5, 0.98, -71.0)
-    ]
+    track_path = _get_map_track_path()
     for i in range(track_path.size() - 1):
         _add_curved_road_segment(track_path[i], track_path[i + 1], i)
-    _add_curve_apex_marker(track_path[5])
-    _add_curve_apex_marker(track_path[11])
-    _add_curve_apex_marker(track_path[17])
+    if track_path.size() > 17:
+        _add_curve_apex_marker(track_path[5])
+        _add_curve_apex_marker(track_path[11])
+        _add_curve_apex_marker(track_path[17])
+
+func _get_map_track_path() -> Array[Vector3]:
+    if selected_map == "HIGHWAY":
+        return [
+            Vector3(0.0, 0.0, 18.0), Vector3(0.0, 0.0, 10.0), Vector3(1.0, 0.0, 2.0),
+            Vector3(3.5, 0.02, -6.0), Vector3(7.0, 0.04, -14.0), Vector3(8.5, 0.08, -22.0),
+            Vector3(7.0, 0.12, -30.0), Vector3(2.5, 0.16, -38.0), Vector3(-3.5, 0.2, -46.0),
+            Vector3(-7.5, 0.24, -54.0), Vector3(-6.5, 0.28, -62.0), Vector3(-1.5, 0.32, -70.0),
+            Vector3(5.0, 0.36, -78.0), Vector3(10.0, 0.4, -86.0), Vector3(12.0, 0.44, -94.0),
+            Vector3(9.0, 0.48, -102.0), Vector3(3.0, 0.52, -108.0), Vector3(-4.0, 0.56, -112.0),
+            Vector3(-10.0, 0.6, -108.0), Vector3(-12.0, 0.64, -100.0), Vector3(-9.0, 0.68, -92.0),
+            Vector3(-3.0, 0.72, -84.0), Vector3(3.0, 0.76, -76.0)
+        ]
+    if selected_map == "DESERT":
+        return [
+            Vector3(0.0, 0.0, 16.0), Vector3(-4.0, 0.02, 9.0), Vector3(-8.0, 0.04, 2.0),
+            Vector3(-9.0, 0.06, -6.0), Vector3(-5.0, 0.1, -14.0), Vector3(2.0, 0.14, -20.0),
+            Vector3(9.0, 0.18, -25.0), Vector3(12.0, 0.22, -32.0), Vector3(10.0, 0.26, -40.0),
+            Vector3(4.0, 0.3, -47.0), Vector3(-4.0, 0.34, -52.0), Vector3(-12.0, 0.38, -56.0),
+            Vector3(-16.0, 0.42, -63.0), Vector3(-13.0, 0.46, -70.0), Vector3(-5.0, 0.5, -75.0),
+            Vector3(4.0, 0.54, -77.0), Vector3(13.0, 0.58, -74.0), Vector3(17.0, 0.62, -67.0),
+            Vector3(15.0, 0.66, -59.0), Vector3(8.0, 0.7, -54.0), Vector3(0.0, 0.74, -50.0),
+            Vector3(-7.0, 0.78, -45.0), Vector3(-11.0, 0.82, -38.0)
+        ]
+    return [
+        Vector3(0.0, 0.0, 15.0), Vector3(-0.8, 0.0, 11.0), Vector3(-2.2, 0.0, 7.0),
+        Vector3(-3.8, 0.02, 3.0), Vector3(-4.8, 0.04, -1.0), Vector3(-4.5, 0.06, -5.0),
+        Vector3(-2.8, 0.08, -9.0), Vector3(0.0, 0.1, -13.0), Vector3(3.5, 0.14, -17.0),
+        Vector3(6.5, 0.18, -21.0), Vector3(8.2, 0.22, -25.0), Vector3(8.8, 0.28, -29.0),
+        Vector3(8.0, 0.34, -33.0), Vector3(5.5, 0.4, -37.0), Vector3(2.0, 0.48, -40.0),
+        Vector3(-1.5, 0.56, -43.0), Vector3(-3.8, 0.62, -47.0), Vector3(-4.5, 0.68, -51.0),
+        Vector3(-3.2, 0.74, -55.0), Vector3(0.0, 0.8, -59.0), Vector3(4.0, 0.86, -63.0),
+        Vector3(7.2, 0.92, -67.0), Vector3(8.5, 0.98, -71.0)
+    ]
+
 
 func _add_curved_road_segment(a: Vector3, b: Vector3, index: int) -> void:
     var midpoint := (a + b) * 0.5
@@ -1025,17 +1037,18 @@ func _select_map(map_value: String) -> void:
     _apply_map(selected_map)
 
 func _apply_map(map_value: String) -> void:
+    selected_map = map_value
     var world := get_node_or_null("WorldEnvironment") as WorldEnvironment
-    if not world:
-        return
-    var environment := world.environment
-    if map_value == "HIGHWAY":
-        environment.background_color = Color(0.18, 0.2, 0.24)
-    elif map_value == "DESERT":
-        environment.background_color = Color(0.32, 0.22, 0.12)
-    else:
-        environment.background_color = Color(0.08, 0.1, 0.14)
+    if world:
+        var environment := world.environment
+        if map_value == "HIGHWAY":
+            environment.background_color = Color(0.18, 0.2, 0.24)
+        elif map_value == "DESERT":
+            environment.background_color = Color(0.32, 0.22, 0.12)
+        else:
+            environment.background_color = Color(0.08, 0.1, 0.14)
     _update_map_label()
+    _save_progress()
 
 func _update_map_label() -> void:
     if is_instance_valid(map_label):
